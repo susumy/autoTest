@@ -747,6 +747,146 @@ E:\Python310\python.exe code\day2\homework_pom.py</code></pre>
   <strong>💡 关键结论：</strong>你的代码、Python、VS Code 都是独立的。TRAE 只是一个 AI 助手，关闭 TRAE 后，用普通 VS Code 打开同一个项目文件夹，一切照常运行。TRAE 沙箱的 <code>mkdtemp</code> 限制只影响 TRAE 内部运行，不影响你的独立环境。
 </div>
 
+<!-- ===== CHAPTER 9: Gitee Pages 部署指南 ===== -->
+<h2>九、Gitee Pages 部署指南</h2>
+
+<h3>9.1 为什么选择 Gitee Pages</h3>
+
+<div class="card">
+  <p>Gitee Pages 是<mark class="key">免费</mark>的静态网站托管服务，适合托管 HTML 文档，国内访问速度快。相比 GitHub Pages：</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>对比</th><th>Gitee Pages</th><th>GitHub Pages</th></tr></thead>
+    <tbody>
+      <tr><td>费用</td><td><span class="tag ok">免费</span></td><td><span class="tag ok">免费</span></td></tr>
+      <tr><td>国内访问速度</td><td><span class="tag ok">快</span></td><td><span class="tag warn">慢/不稳定</span></td></tr>
+      <tr><td>数据安全</td><td><span class="tag info">公开仓库</span>（免费版）</td><td><span class="tag info">公开仓库</span>（免费版）</td></tr>
+      <tr><td>自定义域名</td><td><span class="tag ok">支持</span></td><td><span class="tag ok">支持</span></td></tr>
+      <tr><td>自动部署</td><td><span class="tag warn">需手动更新</span></td><td><span class="tag ok">push 自动部署</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p style="margin-top:0.75rem;"><strong>本次选择 Gitee 的原因：</strong>GitHub 在国内经常打不开，而 Gitee 是国内平台，访问稳定。</p>
+</div>
+
+<h3>9.2 数据安全说明</h3>
+<div class="card">
+  <p>本次部署的文档内容全部是<mark class="key">公开的技术学习笔记</mark>，不包含任何敏感信息：</p>
+  <ul>
+    <li>✅ 环境配置步骤（公开的安装命令）</li>
+    <li>✅ 代码示例（通用的自动化脚本）</li>
+    <li>✅ 学习问答（技术概念解释）</li>
+    <li>❌ 不含密码、密钥、Token</li>
+    <li>❌ 不含个人隐私数据</li>
+    <li>❌ 不含公司内部信息</li>
+  </ul>
+  <p style="margin-top:0.5rem;">Gitee 免费版的仓库是<strong>公开的</strong>（所有人都能看），但这份文档本身就是学习资料，公开分享没有安全风险。</p>
+</div>
+
+<h3>9.3 部署步骤</h3>
+
+<h4>步骤一：注册 Gitee 账号</h4>
+<ol class="steps">
+  <li>访问 <a href="https://gitee.com/">gitee.com</a>，点击"注册"</li>
+  <li>使用手机号或邮箱注册，完成实名认证（Gitee Pages 要求实名）</li>
+</ol>
+
+<h4>步骤二：创建仓库</h4>
+<ol class="steps">
+  <li>登录后点击右上角 <strong>+</strong> → <strong>新建仓库</strong></li>
+  <li>仓库名称填写：<code>auto-test-learning</code></li>
+  <li>仓库介绍：<strong>自动化测试学习</strong></li>
+  <li>是否开源：选择 <strong>公开</strong></li>
+  <li>勾选 <strong>使用 Readme 文件初始化仓库</strong>（可选）</li>
+  <li>点击 <strong>创建</strong></li>
+</ol>
+
+<h4>步骤三：推送代码到 Gitee</h4>
+<pre><code># 1. 进入部署目录
+cd "C:\Users\sumy\AppData\Roaming\TRAE SOLO CN\ModularData\ai-agent\work-mode-projects\6a5f32ce1abb34e43e22bec2\deploy-github"
+
+# 2. 初始化 Git 仓库（如果还没有）
+git init
+
+# 3. 添加所有文件并提交
+git add .
+git commit -m "初始化：自动化测试学习文档"
+
+# 4. 添加 Gitee 远程仓库地址
+git remote add origin https://gitee.com/susumy/auto-test-learning.git
+
+# 5. 推送到 main 分支
+git branch -M main
+git push -u origin main</code></pre>
+
+<div class="callout warn">
+  <strong>⚠️ Git 未安装怎么办？</strong>
+  <p>如果提示 <code>git 不是内部或外部命令</code>，需要先安装 Git：</p>
+  <p>下载地址：<a href="https://git-scm.com/download/win">https://git-scm.com/download/win</a></p>
+  <p>安装时一路默认即可，安装完成后重新打开 PowerShell。</p>
+</div>
+
+<h4>步骤四：开启 Gitee Pages</h4>
+<ol class="steps">
+  <li>进入仓库页面：<a href="https://gitee.com/susumy/auto-test-learning">https://gitee.com/susumy/auto-test-learning</a></li>
+  <li>点击顶部 <strong>服务</strong> → <strong>Gitee Pages</strong></li>
+  <li>部署分支选择：<strong>main</strong></li>
+  <li>部署目录填写：<strong>/</strong>（根目录）</li>
+  <li>点击 <strong>启动</strong>（首次需要实名认证）</li>
+  <li>等待几秒，页面会显示访问地址：<code>https://susumy.gitee.io/auto-test-learning</code></li>
+</ol>
+
+<div class="callout tip">
+  <strong>💡 更新文档的方法：</strong>Gitee Pages 不会自动更新。修改文档后需要：
+  <pre><code>git add index.html
+git commit -m "更新文档内容"
+git push</code></pre>
+  然后在 Gitee Pages 设置页面点击 <strong>更新</strong> 按钮。
+</div>
+
+<h3>9.4 访问你的文档</h3>
+<div class="card">
+  <p>部署成功后，可以通过以下 URL 在任何设备上访问：</p>
+  <p style="font-size:1.2rem;text-align:center;padding:1rem;">
+    <strong><a href="https://susumy.gitee.io/auto-test-learning">https://susumy.gitee.io/auto-test-learning</a></strong>
+  </p>
+  <p style="text-align:center;color:var(--muted);">手机、平板、其他电脑都能打开，只要有浏览器就能访问</p>
+</div>
+
+<h3>9.5 部署过程记录</h3>
+<div class="card">
+  <h4>实际执行记录（2026-07-27）</h4>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>步骤</th><th>操作</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>创建 Gitee 仓库 <code>auto-test-learning</code></td><td><span class="tag ok">已完成</span></td></tr>
+      <tr><td>2</td><td>准备部署文件（index.html）</td><td><span class="tag ok">已完成</span></td></tr>
+      <tr><td>3</td><td>初始化 Git 仓库</td><td><span class="tag ok">已完成</span></td></tr>
+      <tr><td>4</td><td>推送代码到 Gitee</td><td><span class="tag ok">已完成</span></td></tr>
+      <tr><td>5</td><td>开启 Gitee Pages</td><td><span class="tag warn">待操作</span>（需在 Gitee 网页手动开启）</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<h3>9.6 常见问题</h3>
+
+<div class="qa-item">
+  <div class="q">Gitee Pages 要求实名认证，安全吗？</div>
+  <div class="a">这是国家规定的互联网实名制要求，Gitee 是国内正规平台（开源中国旗下），安全的。只需完成一次实名认证即可。</div>
+</div>
+
+<div class="qa-item">
+  <div class="q">为什么更新了代码但网页没变？</div>
+  <div class="a">Gitee Pages 需要手动点击"更新"按钮才会重新部署。push 代码后，去 Gitee Pages 设置页面点 <strong>更新</strong>。</div>
+</div>
+
+<div class="qa-item">
+  <div class="q">免费版有什么限制？</div>
+  <div class="a">免费版仓库必须公开，单文件大小不超过 50MB，流量无限制。对于托管 HTML 文档完全够用。</div>
+</div>
+
 </div><!-- /container -->
 
 </body>
