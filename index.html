@@ -747,26 +747,19 @@ E:\Python310\python.exe code\day2\homework_pom.py</code></pre>
   <strong>💡 关键结论：</strong>你的代码、Python、VS Code 都是独立的。TRAE 只是一个 AI 助手，关闭 TRAE 后，用普通 VS Code 打开同一个项目文件夹，一切照常运行。TRAE 沙箱的 <code>mkdtemp</code> 限制只影响 TRAE 内部运行，不影响你的独立环境。
 </div>
 
-<!-- ===== CHAPTER 9: Gitee Pages 部署指南 ===== -->
-<h2>九、Gitee Pages 部署指南</h2>
+<!-- ===== CHAPTER 9: GitHub Pages 部署实战 ===== -->
+<h2>九、GitHub Pages 部署实战</h2>
 
-<h3>9.1 为什么选择 Gitee Pages</h3>
+<h3>9.1 背景：为什么最终选 GitHub Pages</h3>
 
 <div class="card">
-  <p>Gitee Pages 是<mark class="key">免费</mark>的静态网站托管服务，适合托管 HTML 文档，国内访问速度快。相比 GitHub Pages：</p>
-  <div class="table-wrap">
-  <table>
-    <thead><tr><th>对比</th><th>Gitee Pages</th><th>GitHub Pages</th></tr></thead>
-    <tbody>
-      <tr><td>费用</td><td><span class="tag ok">免费</span></td><td><span class="tag ok">免费</span></td></tr>
-      <tr><td>国内访问速度</td><td><span class="tag ok">快</span></td><td><span class="tag warn">慢/不稳定</span></td></tr>
-      <tr><td>数据安全</td><td><span class="tag info">公开仓库</span>（免费版）</td><td><span class="tag info">公开仓库</span>（免费版）</td></tr>
-      <tr><td>自定义域名</td><td><span class="tag ok">支持</span></td><td><span class="tag ok">支持</span></td></tr>
-      <tr><td>自动部署</td><td><span class="tag warn">需手动更新</span></td><td><span class="tag ok">push 自动部署</span></td></tr>
-    </tbody>
-  </table>
-  </div>
-  <p style="margin-top:0.75rem;"><strong>本次选择 Gitee 的原因：</strong>GitHub 在国内经常打不开，而 Gitee 是国内平台，访问稳定。</p>
+  <p>最初计划使用<strong> Gitee Pages</strong>（国内平台，访问快），但实际操作中发现：</p>
+  <ul>
+    <li>Gitee Pages 的普通版已在 2024 年 5 月永久下线，服务菜单中找不到入口</li>
+    <li>GitHub Pages 仍然免费可用，且 <code>git push</code> 后<mark class="key">自动部署</mark>，无需手动点"更新"</li>
+    <li>GitHub 在国内偶有访问波动，但作为学习文档完全够用</li>
+  </ul>
+  <p style="margin-top:0.5rem;">最终选择 <strong>GitHub Pages</strong> 作为部署平台。</p>
 </div>
 
 <h3>9.2 数据安全说明</h3>
@@ -780,111 +773,224 @@ E:\Python310\python.exe code\day2\homework_pom.py</code></pre>
     <li>❌ 不含个人隐私数据</li>
     <li>❌ 不含公司内部信息</li>
   </ul>
-  <p style="margin-top:0.5rem;">Gitee 免费版的仓库是<strong>公开的</strong>（所有人都能看），但这份文档本身就是学习资料，公开分享没有安全风险。</p>
+  <p style="margin-top:0.5rem;">GitHub 免费版的仓库是<strong>公开的</strong>（所有人都能看），但这份文档本身就是学习资料，公开分享没有安全风险。</p>
 </div>
 
-<h3>9.3 部署步骤</h3>
+<h3>9.3 完整部署步骤（共 4 步）</h3>
 
-<h4>步骤一：注册 Gitee 账号</h4>
-<ol class="steps">
-  <li>访问 <a href="https://gitee.com/">gitee.com</a>，点击"注册"</li>
-  <li>使用手机号或邮箱注册，完成实名认证（Gitee Pages 要求实名）</li>
-</ol>
+<!-- ===== 步骤一 ===== -->
+<h4>步骤一：在 GitHub 创建仓库</h4>
 
-<h4>步骤二：创建仓库</h4>
-<ol class="steps">
-  <li>登录后点击右上角 <strong>+</strong> → <strong>新建仓库</strong></li>
-  <li>仓库名称填写：<code>auto-test-learning</code></li>
-  <li>仓库介绍：<strong>自动化测试学习</strong></li>
-  <li>是否开源：选择 <strong>公开</strong></li>
-  <li>勾选 <strong>使用 Readme 文件初始化仓库</strong>（可选）</li>
-  <li>点击 <strong>创建</strong></li>
-</ol>
+<p>访问 <a href="https://github.com/new">github.com/new</a>，填写仓库信息：</p>
 
-<h4>步骤三：推送代码到 Gitee</h4>
-<pre><code># 1. 进入部署目录
+<div class="table-wrap">
+<table>
+  <thead><tr><th>字段</th><th>填写内容</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Owner</strong></td><td><code>susumy</code></td><td>你的 GitHub 用户名</td></tr>
+    <tr><td><strong>Repository name</strong></td><td><code>sumy</code></td><td>仓库名（决定网址：<code>susumy.github.io/sumy</code>）</td></tr>
+    <tr><td><strong>Description</strong></td><td>速成自动化测试</td><td>仓库描述（可选）</td></tr>
+    <tr><td><strong>Public / Private</strong></td><td><strong>Public</strong>（公开）</td><td>免费版 Pages 必须公开仓库</td></tr>
+    <tr><td><strong>Add README</strong></td><td>不勾选</td><td>我们已有 index.html，不需要 README</td></tr>
+    <tr><td><strong>.gitignore</strong></td><td>不勾选</td><td>不需要</td></tr>
+    <tr><td><strong>license</strong></td><td>不勾选</td><td>不需要</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>点击绿色的 <strong>"Create repository"</strong> 按钮完成创建。</p>
+
+<div class="callout tip">
+  <strong>💡 仓库名与网址的关系：</strong>
+  <p>仓库名为 <code>sumy</code> → 部署后的网址为 <code>https://susumy.github.io/sumy</code>。如果你创建名为 <code>susumy.github.io</code> 的仓库，则网址直接是 <code>https://susumy.github.io</code>（不带子路径）。</p>
+</div>
+
+<!-- ===== 步骤二 ===== -->
+<h4>步骤二：准备本地文件并提交到 Git</h4>
+
+<p>确保你的 HTML 文件名为 <code>index.html</code>（GitHub Pages 默认找这个文件作为首页），放在部署目录中。</p>
+
+<pre><code># 进入部署目录
 cd "C:\Users\sumy\AppData\Roaming\TRAE SOLO CN\ModularData\ai-agent\work-mode-projects\6a5f32ce1abb34e43e22bec2\deploy-github"
 
-# 2. 初始化 Git 仓库（如果还没有）
+# 初始化 Git 仓库
+# 这个命令会在当前目录创建一个 .git 隐藏文件夹，
+# 用于跟踪文件的所有变更历史
 git init
 
-# 3. 添加所有文件并提交
+# 把所有文件添加到暂存区
+# . 表示当前目录下的所有文件
 git add .
-git commit -m "初始化：自动化测试学习文档"
 
-# 4. 添加 Gitee 远程仓库地址
-git remote add origin https://gitee.com/susumy/auto-test-learning.git
+# 提交到本地仓库，-m 后面是提交信息（描述这次做了什么）
+git commit -m "初始化：自动化测试学习文档"</code></pre>
 
-# 5. 推送到 main 分支
+<div class="callout tip">
+  <strong>💡 这三个命令的含义：</strong>
+  <p><code>git init</code> — 把当前文件夹变成 Git 仓库（只执行一次）</p>
+  <p><code>git add .</code> — 把修改过的文件放入"暂存区"（每次修改后都要执行）</p>
+  <p><code>git commit -m "..."</code> — 把暂存区的内容正式保存为一个版本（每次修改后都要执行）</p>
+</div>
+
+<!-- ===== 步骤三 ===== -->
+<h4>步骤三：推送代码到 GitHub</h4>
+
+<p>把本地仓库和 GitHub 远程仓库关联，然后推送代码。</p>
+
+<pre><code># 添加远程仓库地址
+# origin 是远程仓库的别名（约定俗成的名字，可以理解为"那个远程仓库"）
+git remote add origin https://github.com/susumy/sumy.git
+
+# 把当前分支改名为 main
+# GitHub 默认主分支叫 main（旧项目可能是 master）
 git branch -M main
+
+# 推送代码到 GitHub
+# -u 表示"记住这个对应关系"，以后直接 git push 就行
+# origin 是远程仓库别名，main 是分支名
 git push -u origin main</code></pre>
 
 <div class="callout warn">
-  <strong>⚠️ Git 未安装怎么办？</strong>
-  <p>如果提示 <code>git 不是内部或外部命令</code>，需要先安装 Git：</p>
-  <p>下载地址：<a href="https://git-scm.com/download/win">https://git-scm.com/download/win</a></p>
-  <p>安装时一路默认即可，安装完成后重新打开 PowerShell。</p>
+  <strong>⚠️ 踩坑记录：TRAE 自带的 Git 不完整</strong>
+  <p>执行 <code>git push</code> 时遇到错误：</p>
+  <pre><code>git: 'remote-https' is not a git command</code></pre>
+  <p><strong>原因：</strong>TRAE 环境自带的 Git 缺少 HTTPS 传输模块（<code>git-remote-https</code>），无法通过 HTTPS 协议推送代码。</p>
+  <p><strong>解决：</strong>不使用 TRAE 自带的 Git，改用系统安装的完整版 Git。先检查系统 Git 的位置：</p>
+  <pre><code># 查看系统 Git 安装在哪里
+where git
+# 输出：C:\Program Files\Git\cmd\git.exe</code></pre>
+  <p>然后用完整路径执行推送：</p>
+  <pre><code>&amp; 'C:\Program Files\Git\cmd\git.exe' remote add origin https://github.com/susumy/sumy.git
+&amp; 'C:\Program Files\Git\cmd\git.exe' branch -M main
+&amp; 'C:\Program Files\Git\cmd\git.exe' push -u origin main</code></pre>
+  <p><strong>知识点：</strong>很多 IDE 和工具会自带精简版 Git，功能不完整。如果遇到奇怪的 Git 报错，先用 <code>where git</code> 确认用的是哪个 Git，必要时切换到系统安装的完整版本。</p>
 </div>
 
-<h4>步骤四：开启 Gitee Pages</h4>
+<div class="callout err">
+  <strong>⚠️ 踩坑记录：URL 写错导致推送失败</strong>
+  <p>第一次推送时，仓库地址写成了 <code>sumt</code> 而不是 <code>sumy</code>，导致推送到不存在的仓库。</p>
+  <p><strong>修正方法：</strong></p>
+  <pre><code># 修改远程仓库 URL
+git remote set-url origin https://github.com/susumy/sumy.git
+# 再次推送
+git push -u origin main</code></pre>
+  <p><strong>知识点：</strong><code>git remote set-url</code> 可以修改已有的远程地址，不需要删除再添加。</p>
+</div>
+
+<!-- ===== 步骤四 ===== -->
+<h4>步骤四：开启 GitHub Pages</h4>
+
+<p>推送成功后，在 GitHub 网页上操作：</p>
+
 <ol class="steps">
-  <li>进入仓库页面：<a href="https://gitee.com/susumy/auto-test-learning">https://gitee.com/susumy/auto-test-learning</a></li>
-  <li>点击顶部 <strong>服务</strong> → <strong>Gitee Pages</strong></li>
-  <li>部署分支选择：<strong>main</strong></li>
-  <li>部署目录填写：<strong>/</strong>（根目录）</li>
-  <li>点击 <strong>启动</strong>（首次需要实名认证）</li>
-  <li>等待几秒，页面会显示访问地址：<code>https://susumy.gitee.io/auto-test-learning</code></li>
+  <li>打开仓库页面：<a href="https://github.com/susumy/sumy">https://github.com/susumy/sumy</a></li>
+  <li>点击顶部 <strong>Settings</strong> 标签（不是代码页面，是设置页面）</li>
+  <li>左侧菜单找到 <strong>Pages</strong>（在 "Code and automation" 分组下）</li>
+  <li>在 <strong>Branch</strong> 区域：
+    <ul>
+      <li>下拉框选择 <strong>main</strong> 分支</li>
+      <li>旁边文件夹选择 <strong>/ (root)</strong>（根目录）</li>
+    </ul>
+  </li>
+  <li>点击 <strong>Save</strong> 按钮</li>
+  <li>等待约 1-2 分钟，页面顶部会出现蓝色提示，显示访问地址：<br><strong>https://susumy.github.io/sumy</strong></li>
 </ol>
 
 <div class="callout tip">
-  <strong>💡 更新文档的方法：</strong>Gitee Pages 不会自动更新。修改文档后需要：
-  <pre><code>git add index.html
-git commit -m "更新文档内容"
-git push</code></pre>
-  然后在 Gitee Pages 设置页面点击 <strong>更新</strong> 按钮。
+  <strong>💡 部署需要等待：</strong>GitHub Pages 首次部署需要 1-2 分钟。如果刚保存就打开网址看到 404，是正常的，等一会儿刷新即可。部署完成后，每次 <code>git push</code> 新代码，GitHub 会自动重新部署（约 30 秒），不需要手动操作。
 </div>
 
-<h3>9.4 访问你的文档</h3>
-<div class="card">
-  <p>部署成功后，可以通过以下 URL 在任何设备上访问：</p>
-  <p style="font-size:1.2rem;text-align:center;padding:1rem;">
-    <strong><a href="https://susumy.gitee.io/auto-test-learning">https://susumy.gitee.io/auto-test-learning</a></strong>
-  </p>
-  <p style="text-align:center;color:var(--muted);">手机、平板、其他电脑都能打开，只要有浏览器就能访问</p>
-</div>
+<h3>9.4 部署结果</h3>
 
-<h3>9.5 部署过程记录</h3>
 <div class="card">
-  <h4>实际执行记录（2026-07-27）</h4>
+  <h4>部署信息</h4>
   <div class="table-wrap">
   <table>
-    <thead><tr><th>步骤</th><th>操作</th><th>状态</th></tr></thead>
+    <thead><tr><th>项目</th><th>内容</th></tr></thead>
     <tbody>
-      <tr><td>1</td><td>创建 Gitee 仓库 <code>auto-test-learning</code></td><td><span class="tag ok">已完成</span></td></tr>
-      <tr><td>2</td><td>准备部署文件（index.html）</td><td><span class="tag ok">已完成</span></td></tr>
-      <tr><td>3</td><td>初始化 Git 仓库</td><td><span class="tag ok">已完成</span></td></tr>
-      <tr><td>4</td><td>推送代码到 Gitee</td><td><span class="tag ok">已完成</span></td></tr>
-      <tr><td>5</td><td>开启 Gitee Pages</td><td><span class="tag warn">待操作</span>（需在 Gitee 网页手动开启）</td></tr>
+      <tr><td><strong>平台</strong></td><td>GitHub Pages（免费）</td></tr>
+      <tr><td><strong>仓库地址</strong></td><td><a href="https://github.com/susumy/sumy">https://github.com/susumy/sumy</a></td></tr>
+      <tr><td><strong>访问网址</strong></td><td><a href="https://susumy.github.io/sumy">https://susumy.github.io/sumy</a></td></tr>
+      <tr><td><strong>部署方式</strong></td><td>git push 自动部署</td></tr>
+      <tr><td><strong>部署时间</strong></td><td>2026-07-29</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p style="text-align:center;color:var(--muted);margin-top:0.75rem;">手机、平板、其他电脑都能打开，只要有浏览器就能访问</p>
+</div>
+
+<h3>9.5 执行过程记录</h3>
+<div class="card">
+  <h4>完整操作记录（2026-07-29）</h4>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>步骤</th><th>操作</th><th>状态</th><th>备注</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>尝试 Gitee Pages</td><td><span class="tag err">失败</span></td><td>Gitee Pages 普通版已下线，服务菜单中找不到</td></tr>
+      <tr><td>2</td><td>创建 GitHub 仓库 <code>susumy/sumy</code></td><td><span class="tag ok">已完成</span></td><td>仓库名 sumy，公开</td></tr>
+      <tr><td>3</td><td>准备部署文件</td><td><span class="tag ok">已完成</span></td><td>index.html，标题"自动化测试学习"</td></tr>
+      <tr><td>4</td><td>git init + add + commit</td><td><span class="tag ok">已完成</span></td><td>本地 Git 仓库初始化</td></tr>
+      <tr><td>5</td><td>git push（TRAE Git）</td><td><span class="tag err">失败</span></td><td>remote-https 组件缺失</td></tr>
+      <tr><td>6</td><td>切换到系统 Git 推送</td><td><span class="tag ok">已完成</span></td><td>使用 <code>C:\Program Files\Git\cmd\git.exe</code></td></tr>
+      <tr><td>7</td><td>修正 URL 笔误</td><td><span class="tag ok">已修复</span></td><td>sumt → sumy</td></tr>
+      <tr><td>8</td><td>开启 GitHub Pages</td><td><span class="tag ok">已完成</span></td><td>Settings → Pages → main / root → Save</td></tr>
     </tbody>
   </table>
   </div>
 </div>
 
-<h3>9.6 常见问题</h3>
+<h3>9.6 后续更新文档的方法</h3>
+
+<div class="card">
+  <p>以后修改了文档，只需要三步就能更新线上版本：</p>
+  <pre><code># 1. 进入部署目录
+cd "C:\Users\sumy\AppData\Roaming\TRAE SOLO CN\ModularData\ai-agent\work-mode-projects\6a5f32ce1abb34e43e22bec2\deploy-github"
+
+# 2. 提交修改
+&amp; 'C:\Program Files\Git\cmd\git.exe' add index.html
+&amp; 'C:\Program Files\Git\cmd\git.exe' commit -m "更新文档内容"
+
+# 3. 推送到 GitHub
+&amp; 'C:\Program Files\Git\cmd\git.exe' push</code></pre>
+  <p style="margin-top:0.5rem;">推送后等待约 30 秒，刷新网页就能看到更新。GitHub Pages<mark class="key">自动部署</mark>，不需要手动操作。</p>
+</div>
+
+<h3>9.7 常见问题</h3>
 
 <div class="qa-item">
-  <div class="q">Gitee Pages 要求实名认证，安全吗？</div>
-  <div class="a">这是国家规定的互联网实名制要求，Gitee 是国内正规平台（开源中国旗下），安全的。只需完成一次实名认证即可。</div>
+  <div class="q">为什么刚配置完 Pages 打开网址是 404？</div>
+  <div class="a">GitHub Pages 首次部署需要 1-2 分钟。如果超过 5 分钟还是 404，检查：① 仓库里是否有 <code>index.html</code> 文件 ② Settings → Pages 中 Branch 是否选对了 ③ 是否保存了设置。部署完成后页面顶部会有绿色提示。</div>
 </div>
 
 <div class="qa-item">
-  <div class="q">为什么更新了代码但网页没变？</div>
-  <div class="a">Gitee Pages 需要手动点击"更新"按钮才会重新部署。push 代码后，去 Gitee Pages 设置页面点 <strong>更新</strong>。</div>
+  <div class="q"><code>git: 'remote-https' is not a git command</code> 是什么错误？</div>
+  <div class="a">这是 Git 安装不完整导致的，缺少 HTTPS 传输协议组件。TRAE 等 IDE 自带的 Git 可能是精简版。解决方法：① 用 <code>where git</code> 找到系统完整版 Git 的路径 ② 用完整路径执行命令，如 <code>C:\Program Files\Git\cmd\git.exe push</code>。</div>
 </div>
 
 <div class="qa-item">
-  <div class="q">免费版有什么限制？</div>
-  <div class="a">免费版仓库必须公开，单文件大小不超过 50MB，流量无限制。对于托管 HTML 文档完全够用。</div>
+  <div class="q"><code>git remote add</code>、<code>git push -u</code>、<code>git remote set-url</code> 有什么区别？</div>
+  <div class="a">
+    <div class="table-wrap" style="margin-top:0.5rem;">
+    <table>
+      <thead><tr><th>命令</th><th>用途</th><th>何时使用</th></tr></thead>
+      <tbody>
+        <tr><td><code>git remote add origin URL</code></td><td>添加新的远程仓库地址</td><td>第一次关联远程仓库时</td></tr>
+        <tr><td><code>git remote set-url origin URL</code></td><td>修改已有的远程仓库地址</td><td>URL 写错了或仓库迁移了</td></tr>
+        <tr><td><code>git push -u origin main</code></td><td>推送代码，-u 建立追踪关系</td><td>第一次推送时用 -u，以后直接 git push</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<div class="qa-item">
+  <div class="q">GitHub Pages 免费版有什么限制？</div>
+  <div class="a">免费版仓库必须公开，单文件大小不超过 100MB，每月流量 100GB，每小时构建次数 10 次。对于托管 HTML 学习文档完全够用。</div>
+</div>
+
+<div class="qa-item">
+  <div class="q">如果以后 GitHub 打不开了怎么办？</div>
+  <div class="a">代码和文档都在本地有备份（<code>deploy-github</code> 文件夹），不会丢失。可以随时换到其他平台（如 Cloudflare Pages、Netlify），部署方式类似，只是远程仓库地址不同。</div>
 </div>
 
 </div><!-- /container -->
