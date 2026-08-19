@@ -996,6 +996,1645 @@ cd "C:\Users\sumy\AppData\Roaming\TRAE SOLO CN\ModularData\ai-agent\work-mode-pr
   <div class="a">代码和文档都在本地有备份（<code>deploy-github</code> 文件夹），不会丢失。可以随时换到其他平台（如 Cloudflare Pages、Netlify），部署方式类似，只是远程仓库地址不同。</div>
 </div>
 
+<!-- ===== CHAPTER 10: 面试速记卡 ===== -->
+<h2>十、面试速记卡：元素等待</h2>
+
+<div class="card" style="margin-bottom:1.5rem;">
+  <p style="margin:0;"><strong>面试官最常问的 3 道等待相关题</strong>，每题包含标准答案 + 追问应对 + 代码示例。</p>
+</div>
+
+<!-- ===== 10.1 显式等待的精准条件 ===== -->
+<h3>10.1 显式等待如何"精准等待"？6 种 EC 条件详解</h3>
+
+<p>Selenium 显式等待的核心公式：<code>WebDriverWait + expected_conditions</code>。不是"等多久"，而是"等什么条件"。</p>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>条件</th><th>含义</th><th>适用场景</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>presence_of_element_located</code></td>
+      <td>元素<strong>存在于 DOM</strong> 即可（不要求可见）</td>
+      <td>页面刚加载，HTML 结构已生成但元素可能被 CSS 隐藏</td>
+    </tr>
+    <tr>
+      <td><code>visibility_of_element_located</code></td>
+      <td>元素存在于 DOM <strong>且可见</strong>（宽高 &gt; 0）</td>
+      <td>登录弹窗出现后才能操作</td>
+    </tr>
+    <tr>
+      <td><code>element_to_be_clickable</code></td>
+      <td>元素可见 <strong>且可点击</strong>（不被遮挡、已启用）</td>
+      <td>按钮加载完毕但被灰色遮罩挡住时不会误点</td>
+    </tr>
+    <tr>
+      <td><code>text_to_be_present_in_element</code></td>
+      <td>元素中<strong>包含指定文本</strong></td>
+      <td>等验证码倒计时从 "60秒" 变成 "重新发送"</td>
+    </tr>
+    <tr>
+      <td><code>invisibility_of_element_located</code></td>
+      <td>元素<strong>消失</strong>（从 DOM 移除或不可见）</td>
+      <td>等 loading 遮罩消失后再操作</td>
+    </tr>
+    <tr>
+      <td><code>alert_is_present</code></td>
+      <td>浏览器<strong>弹窗出现</strong></td>
+      <td>等 alert/confirm 弹窗弹出后处理</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h4>场景对比：presence vs clickable</h4>
+
+<div class="card">
+<pre><code># ❌ 写法1：presence — 元素在 DOM 里就行，但可能被遮住
+element = WebDriverWait(driver, 10).until(
+    EC.presence_of_element_located((By.ID, "su"))
+)
+element.click()  # 可能报错！按钮被弹出层挡住了
+
+# ✅ 写法2：clickable — 确保可见且没被遮挡，真正能点
+element = WebDriverWait(driver, 10).until(
+    EC.element_to_be_clickable((By.ID, "su"))
+)
+element.click()  # 放心点，Selenium 已帮你确认</code></pre>
+</div>
+
+<h4>场景对比：sleep vs invisibility</h4>
+
+<div class="card">
+<pre><code># ❌ 暴力的做法
+time.sleep(3)  # 不管 loading 消没消失，都等 3 秒
+driver.find_element(By.ID, "result").click()
+
+# ✅ 精准的做法
+WebDriverWait(driver, 10).until(
+    EC.invisibility_of_element_located((By.CLASS_NAME, "loading-mask"))
+)
+# loading 一消失就立刻继续，可能只用了 0.5 秒
+driver.find_element(By.ID, "result").click()</code></pre>
+</div>
+
+<div class="callout tip">
+  <strong>一句话记忆：</strong>presence = "存在就行"，visibility = "要能看到"，clickable = "要能点击"。越往后越严格。
+</div>
+
+<!-- ===== 10.2 Playwright 自动等待 vs wait_for_selector ===== -->
+<h3>10.2 Playwright 自带等待，为什么还需要 wait_for_selector？</h3>
+
+<p>Playwright 的自动等待<strong>只对操作类方法生效</strong>（click、fill、hover 等），<strong>对查询类方法不生效</strong>。</p>
+
+<div class="card-grid">
+  <div class="card">
+    <h4>✅ 操作类 — 自动等待</h4>
+    <pre><code>page.locator("#btn").click()
+# 自动等按钮可点击
+
+page.locator("#input").fill("hi")
+# 自动等输入框可见</code></pre>
+  </div>
+  <div class="card">
+    <h4>❌ 查询类 — 没有自动等待！</h4>
+    <pre><code>count = page.locator(".result").count()
+# 立刻返回，可能拿到 0！
+
+text = page.locator(".title").text_content()
+# 立刻返回，可能拿到空字符串</code></pre>
+  </div>
+</div>
+
+<h4>实战演示</h4>
+
+<div class="card">
+<pre><code># 场景：搜狗搜索后数结果数量
+
+# ❌ 不等待 — 页面还没加载完，结果是 0
+page.goto("https://www.sogou.com/web?query=Python")
+count = page.locator(".vrwrap").count()
+print(count)  # 输出 0
+
+# ✅ 用 wait_for_selector — 等结果出现后再数
+page.goto("https://www.sogou.com/web?query=Python")
+page.wait_for_selector(".vrwrap")   # 等第一条结果出现
+count = page.locator(".vrwrap").count()
+print(count)  # 输出 10+
+
+# ✅ 用 wait_for_load_state — 等网络请求全部完成
+page.goto("https://www.sogou.com/web?query=Python")
+page.wait_for_load_state("networkidle")  # 等页面彻底加载完
+count = page.locator(".vrwrap").count()
+print(count)  # 输出 10+</code></pre>
+</div>
+
+<h4>什么时候用哪个？</h4>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>场景</th><th>用什么</th></tr></thead>
+  <tbody>
+    <tr><td>页面跳转后，确认页面加载完成</td><td><code>wait_for_load_state("networkidle")</code></td></tr>
+    <tr><td>等某个具体元素出现（如 AJAX 加载的数据）</td><td><code>wait_for_selector(".item")</code></td></tr>
+    <tr><td>点击按钮、填写输入框</td><td>不需要等，直接 <code>click()</code> / <code>fill()</code></td></tr>
+    <tr><td>数元素数量、取文本内容</td><td><strong>必须先</strong> <code>wait_for_selector</code> 或 <code>wait_for_load_state</code></td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="callout tip">
+  <strong>一句话：</strong>Playwright 只帮你等了"怎么操作"，没帮你等"什么时候能操作"。页面跳转、AJAX 动态加载、弹窗这类场景，需要你自己加等待。
+</div>
+
+<!-- ===== 10.3 标准答案 ===== -->
+<h3>10.3 三道高频题完整标准答案</h3>
+
+<div class="qa-item">
+  <div class="q">Selenium 中有哪几种等待方式？有什么区别？</div>
+  <div class="a">
+    <p>三种。① <strong>强制等待</strong> <code>time.sleep()</code> 只在调试时临时用，正式代码不用。② <strong>隐式等待</strong> <code>driver.implicitly_wait(10)</code> 全局设置，查找元素时如果没找到就等，但只检查元素是否存在于 DOM，不关心是否可见可点击。③ <strong>显式等待</strong> <code>WebDriverWait + expected_conditions</code> 是主力，根据具体条件（元素可见、可点击、文本包含）精确等待，不浪费时间。面试时要强调"显式等待是主要手段，不会混用隐式和显式等待"。</p>
+  </div>
+</div>
+
+<div class="qa-item">
+  <div class="q">Playwright 和 Selenium 在等待机制上有什么不同？</div>
+  <div class="a">
+    <p>Playwright 每个操作（click、fill、hover 等）执行前都会自动检查元素是否满足<strong>可操作性条件</strong>：元素必须存在于 DOM、可见、没有动画、没有被其他元素遮挡、处于启用状态。这比 Selenium 的隐式等待更智能——隐式等待只检查元素是否存在。但 Playwright 的自动等待只对<strong>操作类方法</strong>生效，查询类方法（count、text_content 等）不自动等待，页面跳转后也需要手动加 <code>wait_for_load_state</code> 或 <code>wait_for_selector</code>。</p>
+  </div>
+</div>
+
+<div class="qa-item">
+  <div class="q">为什么不用 time.sleep()？</div>
+  <div class="a">
+    <p>两个原因：① <strong>浪费时间</strong>——即使页面 1 秒就加载完了，也要等满固定时间。② <strong>不可靠</strong>——网络慢时固定时间可能不够，元素还是没加载出来。面试时要说"只在调试时用，正式代码必须用显式等待或自动等待"。</p>
+  </div>
+</div>
+
+<!-- ===== CHAPTER 11: 全部代码参考 ===== -->
+<h2 id="code-ref">十一、全部代码参考</h2>
+
+<div class="card" style="margin-bottom:1.5rem;">
+  <p style="margin:0;">以下是课程中所有脚本的完整代码，含详细注释。共 <strong>10 个文件</strong>，按学习顺序排列。</p>
+</div>
+
+<!-- 快速跳转导航 -->
+<div class="card" style="margin-bottom:1.5rem;">
+  <h4 style="margin-top:0;">📂 快速跳转</h4>
+  <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+    <a href="#code-01" style="background:var(--code-bg);padding:0.3rem 0.7rem;border-radius:4px;text-decoration:none;color:var(--accent);font-size:0.85rem;font-weight:600;">01_hello_selenium</a>
+    <a href="#code-02" style="background:var(--code-bg);padding:0.3rem 0.7rem;border-radius:4px;text-decoration:none;color:var(--accent);font-size:0.85rem;font-weight:600;">02_hello_playwright</a>
+    <a href="#code-03" style="background:var(--code-bg);padding:0.3rem 0.7rem;border-radius:4px;text-decoration:none;color:var(--accent);font-size:0.85rem;font-weight:600;">03_locating</a>
+    <a href="#code-04" style="background:var(--code-bg);padding:0.3rem 0.7rem;border-radius:4px;text-decoration:none;color:var(--accent);font-size:0.85rem;font-weight:600;">homework</a>
+    <a href="#code-05" style="background:var(--code-bg);padding:0.3rem 0.7rem;border-radius:4px;text-decoration:none;color:var(--accent);font-size:0.85rem;font-weight:600;">04_pom_concept</a>
+    <a href="#code-06" style="background:var(--code-bg);padding:0.3rem 0.7rem;border-radius:4px;text-decoration:none;color:var(--accent);font-size:0.85rem;font-weight:600;">sogou_page</a>
+    <a href="#code-07" style="background:var(--code-bg);padding:0.3rem 0.7rem;border-radius:4px;text-decoration:none;color:var(--accent);font-size:0.85rem;font-weight:600;">test_sogou</a>
+    <a href="#code-08" style="background:var(--code-bg);padding:0.3rem 0.7rem;border-radius:4px;text-decoration:none;color:var(--accent);font-size:0.85rem;font-weight:600;">baidu_page_pw</a>
+    <a href="#code-09" style="background:var(--code-bg);padding:0.3rem 0.7rem;border-radius:4px;text-decoration:none;color:var(--accent);font-size:0.85rem;font-weight:600;">homework_pom</a>
+    <a href="#code-10" style="background:var(--code-bg);padding:0.3rem 0.7rem;border-radius:4px;text-decoration:none;color:var(--accent);font-size:0.85rem;font-weight:600;">05_waits</a>
+    <a href="#code-11" style="background:var(--code-bg);padding:0.3rem 0.7rem;border-radius:4px;text-decoration:none;color:var(--accent);font-size:0.85rem;font-weight:600;">conftest</a>
+  </div>
+</div>
+<h3 id="code-01">code/day1/01_hello_selenium.py  —  Selenium 入门</h3>
+<div class="card">
+<pre><code>&quot;&quot;&quot;
+Day 1 上午 - 练习 1：Selenium 入门 - 打开百度并搜索
+目标：理解 WebDriver 的基本工作流程
+&quot;&quot;&quot;
+
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.edge.service import Service as EdgeService
+from selenium.webdriver.edge.options import Options as EdgeOptions
+import time
+import tempfile
+import os
+
+# ============================================================
+# 第1步：配置浏览器选项
+# ============================================================
+options = EdgeOptions()
+# 指定用户数据目录（解决 Edge 驱动无法创建临时目录的问题）
+user_data_dir = os.path.join(tempfile.gettempdir(), &quot;selenium_edge&quot;)
+options.add_argument(f&quot;--user-data-dir={user_data_dir}&quot;)
+options.add_argument(&quot;--no-sandbox&quot;)
+options.add_argument(&quot;--disable-dev-shm-usage&quot;)
+options.add_argument(&quot;--disable-gpu&quot;)
+# options.add_argument(&quot;--headless&quot;)  # 无头模式
+
+# ============================================================
+# 第2步：显式指定 msedgedriver 路径
+# ============================================================
+msedgedriver_path = os.path.join(
+    os.path.expanduser(&quot;~&quot;), &quot;.cache&quot;, &quot;selenium&quot;, &quot;msedgedriver&quot;,
+    &quot;win64&quot;, &quot;150.0.4078.83&quot;, &quot;msedgedriver.exe&quot;
+)
+service = EdgeService(executable_path=msedgedriver_path)
+driver = webdriver.Edge(service=service, options=options)
+driver.maximize_window()
+
+# ============================================================
+# 第3步：打开网页
+# ============================================================
+driver.get(&quot;https://www.baidu.com&quot;)
+print(f&quot;页面标题: {driver.title}&quot;)
+
+# ============================================================
+# 第4步：定位元素并交互
+# ============================================================
+# 找到搜索框，输入关键词
+search_box = driver.find_element(By.ID, &quot;kw&quot;)
+search_box.send_keys(&quot;Python UI自动化测试&quot;)
+search_box.send_keys(Keys.RETURN)  # 按回车
+
+# 等待结果加载
+time.sleep(2)
+
+# ============================================================
+# 第5步：获取结果信息
+# ============================================================
+results = driver.find_elements(By.CSS_SELECTOR, &quot;.result&quot;)
+print(f&quot;找到 {len(results)} 条搜索结果&quot;)
+
+# 打印第一条结果的标题
+if results:
+    first_result = results[0].find_element(By.TAG_NAME, &quot;h3&quot;)
+    print(f&quot;第一条结果: {first_result.text}&quot;)
+
+# ============================================================
+# 第6步：关闭浏览器
+# ============================================================
+time.sleep(2)
+driver.quit()
+print(&quot;浏览器已关闭，测试完成！&quot;)</code></pre>
+</div>
+
+<h3 id="code-02">code/day1/02_hello_playwright.py  —  Playwright 入门</h3>
+<div class="card">
+<pre><code>&quot;&quot;&quot;
+Day 1 上午 - 练习 2：Playwright 入门 - 打开百度并搜索
+目标：对比 Selenium，感受 Playwright 的简洁语法
+&quot;&quot;&quot;
+
+from playwright.sync_api import sync_playwright
+
+# ============================================================
+# 第1步：启动 Playwright（使用系统 Edge 浏览器）
+# ============================================================
+with sync_playwright() as p:
+    # 使用系统已安装的 Edge（channel=&quot;msedge&quot;），无需下载任何浏览器
+    browser = p.chromium.launch(channel=&quot;msedge&quot;, headless=False)
+    # 设置浏览器窗口大小，确保元素可见
+    context = browser.new_context(viewport={&quot;width&quot;: 1920, &quot;height&quot;: 1080})
+    page = context.new_page()
+
+    # ============================================================
+    # 第2步：打开网页并搜索
+    # ============================================================
+    page.goto(&quot;https://www.baidu.com&quot;, wait_until=&quot;domcontentloaded&quot;)
+    print(f&quot;页面标题: {page.title()}&quot;)
+
+    # 输入关键词 — 使用 press_sequentially 直接输入，不依赖 visibility 检查
+    page.locator(&quot;#kw&quot;).press_sequentially(&quot;Python UI自动化测试&quot;)
+    # 按回车提交搜索（替代点击按钮，避免 visibility 问题）
+    page.keyboard.press(&quot;Enter&quot;)
+
+    # 等待搜索结果（Playwright 自动等待网络空闲）
+    page.wait_for_load_state(&quot;networkidle&quot;)
+
+    # ============================================================
+    # 第3步：获取结果
+    # ============================================================
+    results = page.locator(&quot;.result&quot;).all()
+    print(f&quot;找到 {len(results)} 条搜索结果&quot;)
+
+    if results:
+        first_title = results[0].locator(&quot;h3&quot;).inner_text()
+        print(f&quot;第一条结果: {first_title}&quot;)
+
+    # ============================================================
+    # 第4步：截图 &amp; 关闭
+    # ============================================================
+    page.screenshot(path=&quot;baidu_search_result.png&quot;)
+    print(&quot;截图已保存为 baidu_search_result.png&quot;)
+
+    browser.close()
+    print(&quot;浏览器已关闭，测试完成！&quot;)</code></pre>
+</div>
+
+<h3 id="code-03">code/day1/03_locating_and_waiting.py  —  8 大定位 + 等待机制</h3>
+<div class="card">
+<pre><code>&quot;&quot;&quot;
+╔══════════════════════════════════════════════════════════════╗
+║  Day 1 下午 - 练习 3：元素定位 8 大策略 + 等待机制          ║
+║  使用 Playwright 调用系统 Edge                              ║
+║  练习对象：搜狗搜索（国内访问快，结构稳定，含经典搜索框）     ║
+║  注释中同时标注 Selenium 等价写法                            ║
+╚══════════════════════════════════════════════════════════════╝
+
+面试覆盖知识点：
+1. 8 种元素定位方式及优先级
+2. 强制等待 vs 隐式等待 vs 显式等待（三种等待的区别）
+3. CSS Selector 编写技巧
+4. Playwright 自动等待机制 vs Selenium 手动等待
+&quot;&quot;&quot;
+
+# ═══════════════════════════════════════════════════════════════
+# 第 0 步：导包 — 每行详解
+# ═══════════════════════════════════════════════════════════════
+
+# sync_playwright：Playwright 的&quot;同步模式&quot;入口
+# &quot;同步&quot; = 代码一行一行顺序执行，写完上一行才执行下一行
+# 适合初学者，容易理解执行顺序
+#
+# 【Selenium 对应导包：】
+#   from selenium import webdriver
+#   from selenium.webdriver.common.by import By
+#   from selenium.webdriver.edge.options import Options as EdgeOptions
+#   from selenium.webdriver.support.ui import WebDriverWait
+#   from selenium.webdriver.support import expected_conditions as EC
+from playwright.sync_api import sync_playwright
+
+# time.sleep(秒数)：让程序暂停 N 秒
+# Python 内置模块，不需要 pip install
+import time
+
+
+# ═══════════════════════════════════════════════════════════════
+# 第 1 步：启动浏览器
+# ═══════════════════════════════════════════════════════════════
+
+with sync_playwright() as p:
+    # --- 启动 Edge 浏览器 ---
+    # p.chromium      → 选 Chromium 内核（Edge / Chrome 都基于它）
+    # .launch()       → 启动浏览器进程
+    # channel=&quot;msedge&quot;→ 指定用你电脑已有的 Edge，不下载新浏览器
+    # headless=False  → 显示窗口（True=后台运行，不显示）
+    #
+    # 【Selenium 对应写法：】
+    #   options = EdgeOptions()
+    #   driver = webdriver.Edge(options=options)
+    #   driver.maximize_window()
+    browser = p.chromium.launch(channel=&quot;msedge&quot;, headless=False)
+
+    # --- 创建页面 ---
+    # viewport = 窗口大小，1920x1080 确保元素不被遮挡
+    context = browser.new_context(viewport={&quot;width&quot;: 1920, &quot;height&quot;: 1080})
+    page = context.new_page()
+
+    # --- 打开搜狗搜索 ---
+    # 为什么用搜狗而不是百度？
+    # 百度现在分经典版和 AI 版，HTML 结构不一样，搜索框 id 可能
+    # 是 kw 或 chat-textarea，不稳定。搜狗结构稳定，适合练习。
+    #
+    # 【Selenium 对应写法：】
+    #   driver.get(&quot;https://www.sogou.com&quot;)
+    page.goto(&quot;https://www.sogou.com&quot;, wait_until=&quot;domcontentloaded&quot;)
+    print(f&quot;页面标题: {page.title()}&quot;)
+    # 预期输出：搜狗搜索引擎 - 上网从搜狗开始
+
+
+    # ═══════════════════════════════════════════════════════════════
+    # 第 2 步：8 大元素定位策略（面试必考！）
+    # ═══════════════════════════════════════════════════════════════
+
+    # 核心概念：每个 HTML 元素都有&quot;身份特征&quot;
+    # 定位 = 用这些特征找到元素
+    # Playwright 统一用 page.locator(&quot;选择器&quot;) 来定位
+    # Selenium 统一用 driver.find_element(By.方式, &quot;值&quot;) 来定位
+
+    print(&quot;\n===== 8 大定位策略 =====\n&quot;)
+
+    # ── 方式 1：By.ID（最推荐 ⭐⭐⭐⭐⭐）──
+    # 搜狗搜索框的 HTML：&lt;input id=&quot;query&quot; ...&gt;
+    # Playwright 定位语法：#id名
+    # Selenium 定位语法：find_element(By.ID, &quot;id名&quot;)
+    #
+    # 【Selenium 写法：】
+    #   search_box = driver.find_element(By.ID, &quot;query&quot;)
+    search_box = page.locator(&quot;#query&quot;)
+    print(&quot;1. ID 定位: #query → 搜狗搜索框&quot;)
+
+    # ── 方式 2：By.NAME（推荐 ⭐⭐⭐⭐）──
+    # 搜狗搜索框的 HTML：&lt;input name=&quot;query&quot; ...&gt;
+    # Playwright：标签名[name=&quot;值&quot;]
+    # Selenium：find_element(By.NAME, &quot;值&quot;)
+    #
+    # 【Selenium 写法：】
+    #   search_box = driver.find_element(By.NAME, &quot;query&quot;)
+    search_box2 = page.locator(&#x27;input[name=&quot;query&quot;]&#x27;)
+    print(&quot;2. Name 定位: input[name=&#x27;query&#x27;] → 搜狗搜索框&quot;)
+
+    # ── 方式 3：By.CLASS_NAME（谨慎 ⭐⭐⭐）──
+    # 搜狗搜索框的 class=&quot;sec-input&quot;
+    # Playwright：.类名
+    # Selenium：find_element(By.CLASS_NAME, &quot;类名&quot;)
+    # 缺点：class 可能被多个元素共用
+    #
+    # 【Selenium 写法：】
+    #   search_box = driver.find_element(By.CLASS_NAME, &quot;sec-input&quot;)
+    search_box3 = page.locator(&quot;.sec-input&quot;)
+    print(f&quot;3. Class 定位: .sec-input → 找到 {search_box3.count()} 个&quot;)
+
+    # ── 方式 4：By.TAG_NAME（很少单独用 ⭐⭐）──
+    # Playwright：标签名
+    # Selenium：find_element(By.TAG_NAME, &quot;标签名&quot;)
+    # 缺点：页面里标签太多，不精确
+    #
+    # 【Selenium 写法：】
+    #   all_inputs = driver.find_elements(By.TAG_NAME, &quot;input&quot;)
+    all_inputs = page.locator(&quot;input&quot;)
+    print(f&quot;4. 标签名定位: 页面共有 {all_inputs.count()} 个 input&quot;)
+
+    # ── 方式 5：By.LINK_TEXT（仅用于链接 ⭐⭐⭐）──
+    # 搜狗页面上有&quot;新闻&quot;链接
+    # Playwright：a:has-text(&quot;精确文字&quot;)
+    # Selenium：find_element(By.LINK_TEXT, &quot;精确文字&quot;)
+    #
+    # 【Selenium 写法：】
+    #   news_link = driver.find_element(By.LINK_TEXT, &quot;新闻&quot;)
+    news_link = page.locator(&#x27;a:has-text(&quot;新闻&quot;)&#x27;)
+    print(f&quot;5. 链接文字定位: &#x27;新闻&#x27; → {news_link.count()} 个&quot;)
+
+    # ── 方式 6：By.PARTIAL_LINK_TEXT（模糊匹配 ⭐⭐）──
+    # Playwright：a:has-text(&quot;部分文字&quot;) — 语法跟方式 5 一样
+    # Selenium：find_element(By.PARTIAL_LINK_TEXT, &quot;部分文字&quot;)
+    # 匹配包含&quot;视&quot;的链接
+    #
+    # 【Selenium 写法：】
+    #   video_link = driver.find_element(By.PARTIAL_LINK_TEXT, &quot;视&quot;)
+    video_link = page.locator(&#x27;a:has-text(&quot;视&quot;)&#x27;)
+    print(f&quot;6. 部分文字定位: 含&#x27;视&#x27;的链接 → {video_link.count()} 个&quot;)
+
+    # ── 方式 7：CSS Selector（最灵活 ⭐⭐⭐⭐⭐）──
+    # CSS 选择器是前端工程师的必备技能，自动化测试也要用
+    # Playwright：.locator(&quot;CSS选择器&quot;)
+    # Selenium：find_element(By.CSS_SELECTOR, &quot;CSS选择器&quot;)
+    # 各种写法演示：
+
+    # ID 选择器
+    # 【Selenium：driver.find_element(By.CSS_SELECTOR, &quot;#query&quot;)】
+    pwd1 = page.locator(&quot;#query&quot;)
+    print(&quot;7.1 CSS ID: #query&quot;)
+
+    # 属性选择器
+    # 【Selenium：driver.find_element(By.CSS_SELECTOR, &#x27;input[name=&quot;query&quot;]&#x27;)】
+    pwd2 = page.locator(&#x27;input[name=&quot;query&quot;]&#x27;)
+    print(&quot;7.2 CSS 属性: input[name=&#x27;query&#x27;]&quot;)
+
+    # 组合选择器（标签 + 类 + 属性同时满足）
+    # 【Selenium：driver.find_element(By.CSS_SELECTOR, &#x27;input.sec-input[name=&quot;query&quot;]&#x27;)】
+    pwd3 = page.locator(&#x27;input.sec-input[name=&quot;query&quot;]&#x27;)
+    print(f&quot;7.3 CSS 组合: 找到 {pwd3.count()} 个&quot;)
+
+    # 层级选择器（空格 = 后代，&gt; = 直接子元素）
+    # form 里面的 input
+    # 【Selenium：driver.find_elements(By.CSS_SELECTOR, &quot;form input&quot;)】
+    form_input = page.locator(&quot;form input&quot;)
+    print(f&quot;7.4 CSS 层级: form input → 找到 {form_input.count()} 个&quot;)
+
+    # first() — 取第一个匹配的元素
+    # 【Selenium：driver.find_element(By.TAG_NAME, &quot;input&quot;) 默认返回第一个】
+    first_input = page.locator(&quot;input&quot;).first
+    print(&quot;7.5 取第一个: input.first&quot;)
+
+    # ── 方式 8：XPATH（兜底方案 ⭐⭐⭐）──
+    # XPath 是 XML 路径语言，功能最强但速度最慢
+    # Playwright：page.locator(&quot;xpath=//...&quot;)
+    # Selenium：find_element(By.XPATH, &quot;//...&quot;)
+    #
+    # 【Selenium 写法：】
+    #   driver.find_element(By.XPATH, &quot;//input[@id=&#x27;query&#x27;]&quot;)
+    #   driver.find_element(By.XPATH, &quot;//input[contains(@class,&#x27;sec&#x27;)]&quot;)
+    #   driver.find_element(By.XPATH, &quot;//input[@id=&#x27;query&#x27; and @name=&#x27;query&#x27;]&quot;)
+
+    # XPath 定位搜狗搜索框
+    xpath_box = page.locator(&quot;xpath=//input[@id=&#x27;query&#x27;]&quot;)
+    print(f&quot;8. XPath 定位: //input[@id=&#x27;query&#x27;] → {xpath_box.count()} 个&quot;)
+
+    # XPath 高级用法：contains（包含匹配）
+    # 匹配 class 中包含 &quot;sec&quot; 的 input
+    xpath_contains = page.locator(&quot;xpath=//input[contains(@class,&#x27;sec&#x27;)]&quot;)
+    print(f&quot;8.1 XPath contains: 找到 {xpath_contains.count()} 个&quot;)
+
+    # XPath 高级用法：text()（文本匹配，CSS 做不到）
+    # 匹配文字恰好是&quot;搜索&quot;的按钮
+    xpath_text = page.locator(&quot;xpath=//input[@value=&#x27;搜狗搜索&#x27;]&quot;)
+    print(f&quot;8.2 XPath 文本匹配: 找到 {xpath_text.count()} 个&quot;)
+
+
+    # ═══════════════════════════════════════════════════════════════
+    # 第 3 步：等待机制（面试高频考点！）
+    # ═══════════════════════════════════════════════════════════════
+
+    print(&quot;\n===== 等待机制 =====\n&quot;)
+
+    # ── 强制等待：time.sleep(秒数)（❌ 不推荐）──
+    # 无论页面是否加载完，都傻等 N 秒
+    # 问题：浪费 时间 + 不稳定
+    # 面试说&quot;我用 sleep 等待&quot;会被扣分
+    time.sleep(1)
+    print(&quot;强制等待 1 秒 — 仅演示，实际项目不要用&quot;)
+
+    # ── 隐式等待（Selenium 有，Playwright 没有）──
+    # 【Selenium 写法：】
+    #   driver.implicitly_wait(10)  # 全局设置，找元素时最多等 10 秒
+    #   含义：之后每次 find_element，如果元素不存在，最多等 10 秒
+    #   缺点：只能等元素&quot;存在&quot;，不能等&quot;可点击&quot;或&quot;可见&quot;
+    #
+    # Playwright 不需要隐式等待，它默认就自动等待元素出现
+    print(&quot;Playwright 不需要隐式等待，默认自动等待元素就绪&quot;)
+
+    # ── 显式等待（Selenium） / 自动等待（Playwright）──
+    # 【Selenium 显式等待写法：】
+    #   wait = WebDriverWait(driver, 10, poll_frequency=0.5)
+    #   # 最多等 10 秒，每 0.5 秒检查一次
+    #   element = wait.until(
+    #       EC.element_to_be_clickable((By.ID, &quot;query&quot;))
+    #       # 等待元素可点击
+    #   )
+    #   element.send_keys(&quot;Python自动化测试&quot;)
+    #
+    #   # 常用 EC 条件：
+    #   EC.presence_of_element_located     → 元素在 DOM 中（不一定可见）
+    #   EC.visibility_of_element_located   → 元素可见
+    #   EC.element_to_be_clickable         → 元素可点击（最常用）
+    #   EC.alert_is_present()              → 弹窗出现
+    #   EC.text_to_be_present_in_element   → 某段文本出现
+    #   EC.title_contains(&quot;xxx&quot;)           → 页面标题包含某段文字
+    #
+    #   ⚠️ 面试陷阱：不要混用隐式等待和显式等待！
+    #   混用会导致不可预测的等待时间，Selenium 官方明确警告。
+
+    # 【Playwright 自动等待写法（简单得多！）：】
+    #   page.locator(&quot;#query&quot;).fill(&quot;xxx&quot;)
+    #   → 自动等待元素可见、可编辑、可操作，然后输入
+    #   → 不需要写任何 wait 代码！
+
+    # 演示：输入搜索词，Playwright 自动等搜索框就绪
+    search_box.fill(&quot;Python UI自动化测试&quot;)
+    print(&quot;输入搜索词 — Playwright 自动等待搜索框就绪&quot;)
+
+    # 按回车搜索
+    # 【Selenium 写法：】
+    #   search_box.send_keys(Keys.RETURN)
+    page.keyboard.press(&quot;Enter&quot;)
+    print(&quot;按回车搜索&quot;)
+
+    # 等待搜索结果页加载
+    # 【Selenium 写法：】
+    #   WebDriverWait(driver, 10).until(
+    #       EC.presence_of_element_located((By.CSS_SELECTOR, &quot;.results&quot;))
+    #   )
+    page.wait_for_load_state(&quot;networkidle&quot;)
+    print(f&quot;搜索结果页标题: {page.title()}&quot;)
+
+    # 获取搜索结果数量
+    # 搜狗搜索结果的 class 是 &quot;vrwrap&quot;
+    # 【Selenium 写法：】
+    #   results = driver.find_elements(By.CSS_SELECTOR, &quot;.vrwrap&quot;)
+    #   print(f&quot;找到 {len(results)} 条结果&quot;)
+    results = page.locator(&quot;.vrwrap&quot;)
+    print(f&quot;找到 {results.count()} 条搜索结果&quot;)
+
+    if results.count() &gt; 0:
+        # 【Selenium 写法：】
+        #   first = results[0].find_element(By.TAG_NAME, &quot;h3&quot;).text
+        first = results.first.locator(&quot;h3&quot;).inner_text()
+        print(f&quot;第一条结果: {first}&quot;)
+
+
+    # ═══════════════════════════════════════════════════════════════
+    # 第 4 步：CSS Selector vs XPath（面试对比）
+    # ═══════════════════════════════════════════════════════════════
+
+    print(&quot;\n===== CSS Selector vs XPath =====&quot;)
+
+    print(&quot;&quot;&quot;
+    同一个元素，两种写法对比：
+
+    ┌──────────────────────────┬─────────────────────────────────┐
+    │ 场景                     │ CSS Selector            │ XPath │
+    ├──────────────────────────┼─────────────────────────┼───────┤
+    │ 按 id 定位               │ #query                  │ //input[@id=&#x27;query&#x27;]       │
+    │ 按 class 定位            │ .sec-input              │ //*[@class=&#x27;sec-input&#x27;]   │
+    │ 按 name 属性             │ input[name=&#x27;query&#x27;]     │ //input[@name=&#x27;query&#x27;]    │
+    │ 按文本内容（CSS 做不到） │ 不支持                  │ //a[text()=&#x27;新闻&#x27;]        │
+    │ 包含匹配                 │ [class*=&#x27;sec&#x27;]          │ //*[contains(@class,&#x27;sec&#x27;)]│
+    │ 找父元素（CSS 做不到）   │ 不支持                  │ //input/..                │
+    │ 多条件同时满足           │ input.sec[name=&#x27;query&#x27;] │ //input[@id=&#x27;query&#x27; and @name=&#x27;query&#x27;] │
+    └──────────────────────────┴─────────────────────────┴───────┘
+
+    面试回答模板：
+    &quot;CSS Selector 速度更快、语法更简洁、浏览器原生支持。
+     XPath 功能更强，支持文本匹配和轴定位，但速度慢、可读性差。
+     我的原则是：能用 CSS 就不用 XPath。
+     只有 CSS 处理不了（比如按文本内容定位）才用 XPath。
+     IE 浏览器对 XPath 支持也较差。&quot;
+    &quot;&quot;&quot;)
+
+
+    # ═══════════════════════════════════════════════════════════════
+    # 结束
+    # ═══════════════════════════════════════════════════════════════
+
+    time.sleep(2)  # 让你看到搜索结果
+    browser.close()
+
+    # 【Selenium 关闭写法：】
+    #   driver.quit()  # quit() 关闭所有窗口+终止驱动进程
+    #   driver.close() # close() 只关闭当前窗口，驱动还在跑
+    #   ⚠️ 面试考点：quit() vs close() 的区别
+
+    print(&quot;\n浏览器已关闭&quot;)
+    print(&quot;=&quot; * 50)
+    print(&quot;Day 1 下午练习完成！&quot;)
+    print(&quot;&quot;&quot;
+    总结：
+    1. 定位优先级：ID &gt; Name &gt; CSS Selector &gt; XPath &gt; 其他
+    2. 三种等待：强制(❌) 隐式(⚠️) 显式(✅)
+       Playwright 自动等待，比 Selenium 省心
+    3. CSS vs XPath：优先 CSS，搞不定用 XPath
+    4. 面试常见陷阱：
+       - 不要混用隐式等待和显式等待
+       - quit() 和 close() 的区别
+       - sleep 为什么不好
+    &quot;&quot;&quot;)</code></pre>
+</div>
+
+<h3 id="code-04">code/day1/homework.py  —  Day 1 作业</h3>
+<div class="card">
+<pre><code>&quot;&quot;&quot;
+╔══════════════════════════════════════════════════════════════╗
+║  Day 1 作业：独立完成元素定位                                   ║
+║                                                              ║
+║  任务说明：                                                   ║
+║  1. 用 F12 开发者工具找元素                                    ║
+║  2. 把找到的属性填入 TODO 处                                   ║
+║  3. 运行脚本，全部通过才算完成                                 ║
+║                                                              ║
+║  提示：                                                       ║
+║  - 右键元素 → 检查 → 看 id / class / name 属性                ║
+║  - 或者点左上角小箭头图标，再点页面元素，直接跳转 HTML          ║
+║  - 搜索结果数量可能不同，只要 &gt; 0 就算通过                     ║
+╚══════════════════════════════════════════════════════════════╝
+&quot;&quot;&quot;
+
+from playwright.sync_api import sync_playwright
+import time
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(channel=&quot;msedge&quot;, headless=False)
+    context = browser.new_context(viewport={&quot;width&quot;: 1920, &quot;height&quot;: 1080})
+    page = context.new_page()
+
+    print(&quot;=&quot; * 50)
+    print(&quot;Day 1 作业开始！&quot;)
+    print(&quot;=&quot; * 50)
+
+    # ╔══════════════════════════════════════════════════════════════╗
+    # ║  任务 1：打开 GitHub 登录页，找到以下元素                      ║
+    # ╚══════════════════════════════════════════════════════════════╝
+
+    # page.goto(&quot;https://github.com/login&quot;, wait_until=&quot;domcontentloaded&quot;)
+    # print(f&quot;\n任务 1：当前页面 = {page.title()}&quot;)
+
+    # # ── 1.1 找到用户名输入框 ──
+    # # TODO：用 F12 找到 id 属性，填入下面
+    # username_input = page.locator(&quot;login_field&quot;)  # ← 把 TODO_填这里 替换为真正的 id
+    # print(f&quot;1.1 用户名输入框: 找到 {username_input.count()} 个&quot;)
+
+    # # ── 1.2 找到密码输入框 ──
+    # # TODO：用 F12 找到 id 属性，填入下面
+    # password_input = page.locator(&quot;password&quot;)  # ← 把 TODO_填这里 替换为真正的 id
+    # print(f&quot;1.2 密码输入框: 找到 {password_input.count()} 个&quot;)
+
+    # # ── 1.3 找到登录按钮 ──
+    # # TODO：用 F12 找，登录按钮没有 id，但有 type 属性
+    # # 提示：&lt;input type=&quot;submit&quot; ...&gt;
+    # #这里可以用name么
+    # login_btn = page.locator(&#x27;input[type=&quot;submit&quot;]&#x27;)  # ← 比如 input[type=&quot;submit&quot;]
+    # print(f&quot;1.3 登录按钮: 找到 {login_btn.count()} 个&quot;)
+
+    # # ── 1.4 找到 &quot;Forgot password?&quot; 链接 ──
+    # # TODO：用 F12 找到这个链接，看它的 href 属性是什么
+    # # 提示：用 text= 定位，比 a:has-text 更稳定（不依赖标签类型）
+    # forgot_link = page.locator(&#x27;a:text(&quot;Forgot password?&quot;)&#x27;)  # ← 比如 text=Forgot password?
+    # print(f&quot;1.4 忘记密码链接: 找到 {forgot_link.count()} 个&quot;)
+
+
+    # ╔══════════════════════════════════════════════════════════════╗
+    # ║  任务 2：打开搜狗搜索，自己写搜索流程                          ║
+    # ╚══════════════════════════════════════════════════════════════╝
+
+    page.goto(&quot;https://www.sogou.com&quot;, wait_until=&quot;domcontentloaded&quot;)
+    print(f&quot;\n任务 2：当前页面 = {page.title()}&quot;)
+
+    # ── 2.1 定位搜索框，输入一句话 ──
+    # TODO：用 F12 找到搜索框的 id，然后用 .fill() 输入
+    #id为啥需要加井号
+    search_box = page.locator(&quot;#query&quot;)  # ← 替换 TODO_填这里
+    search_box.fill(&quot;时光杂货店&quot;)     # ← 替换搜索词
+    print(&quot;2.1 已输入搜索词&quot;)
+
+    # ── 2.2 按回车搜索 ──
+    page.keyboard.press(&quot;Enter&quot;)
+    print(&quot;2.2 已按回车搜索&quot;)
+
+    # ── 2.3 等待结果页加载 ──
+    page.wait_for_load_state(&quot;networkidle&quot;)
+    print(f&quot;2.3 搜索结果页标题: {page.title()}&quot;)
+
+    # ── 2.4 获取搜索结果数量 ──
+    # TODO：用 F12 在搜索结果页找到每条结果的 class 名
+    # 提示：搜狗搜索结果 class 是 &quot;vrwrap&quot;
+    results = page.locator(&quot;.vrwrap&quot;)  # ← 替换 TODO_填这里
+    count = results.count()
+    print(f&quot;2.4 找到 {count} 条搜索结果&quot;)
+
+    # ── 2.5 验证：搜索结果应该 &gt; 0 ──
+    if count &gt; 0:
+        first_title = results.first.locator(&quot;h3&quot;).inner_text()
+        print(f&quot;2.5 ✅ 通过！第一条结果: {first_title}&quot;)
+    else:
+        print(&quot;2.5 ❌ 失败！没找到搜索结果，检查 .vrwrap 是否正确&quot;)
+
+
+    # ╔══════════════════════════════════════════════════════════════╗
+    # ║  任务 3（加分题）：用 Name 属性定位搜索框                      ║
+    # ╚══════════════════════════════════════════════════════════════╝
+
+    page.goto(&quot;https://www.sogou.com&quot;, wait_until=&quot;domcontentloaded&quot;)
+    print(f&quot;\n任务 3（加分题）：当前页面 = {page.title()}&quot;)
+
+    # TODO：用 input[name=&quot;xxx&quot;] 方式定位搜索框，而不是 #id
+    # 提示：搜狗搜索框的 name 属性是 &quot;query&quot;
+    search_box_by_name = page.locator(&#x27;input[name=&quot;query&quot;]&#x27;)  # ← 替换，比如 input[name=&quot;query&quot;]
+    print(f&quot;任务 3: 用 Name 定位到 {search_box_by_name.count()} 个搜索框&quot;)
+
+
+    # ═══════════════════════════════════════════════════════════════
+    # 完成
+    # ═══════════════════════════════════════════════════════════════
+    time.sleep(2)
+    browser.close()
+    print(&quot;\n&quot; + &quot;=&quot; * 50)
+    print(&quot;作业完成！检查：&quot;)
+    print(&quot;  1.1 用户名输入框: 应为 1 个&quot;)
+    print(&quot;  1.2 密码输入框: 应为 1 个&quot;)
+    print(&quot;  1.3 登录按钮: 应为 1 个&quot;)
+    print(&quot;  1.4 注册链接: 应为 1 个&quot;)
+    print(&quot;  2.5 搜索结果: 应为 &gt; 0&quot;)
+    print(&quot;  任务 3: 应为 1 个&quot;)
+    print(&quot;=&quot; * 50)</code></pre>
+</div>
+
+<h3 id="code-05">code/day2/04_pom_concept.py  —  POM 设计模式概念</h3>
+<div class="card">
+<pre><code>&quot;&quot;&quot;
+╔══════════════════════════════════════════════════════════════╗
+║  Day 2 上午 - 练习 4：Page Object Model（POM）设计模式      ║
+║                                                              ║
+║  本脚本演示同一个任务用两种写法：                              ║
+║    前半段 = 传统写法（Day 1 风格，散乱）                      ║
+║    后半段 = POM 写法（Day 2 风格，清晰）                      ║
+║                                                              ║
+║  对比后你会理解 POM 为什么是面试必考                          ║
+╚══════════════════════════════════════════════════════════════╝
+&quot;&quot;&quot;
+
+from playwright.sync_api import sync_playwright
+import time
+
+print(&quot;=&quot; * 60)
+print(&quot;  Day 2 上午：POM 设计模式&quot;)
+print(&quot;=&quot; * 60)
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(channel=&quot;msedge&quot;, headless=False)
+    context = browser.new_context(viewport={&quot;width&quot;: 1920, &quot;height&quot;: 1080})
+    page = context.new_page()
+
+    # ═══════════════════════════════════════════════════════════════
+    # 第 1 部分：传统写法（你在 Day 1 学的）
+    # ═══════════════════════════════════════════════════════════════
+    print(&quot;\n&quot; + &quot;─&quot; * 60)
+    print(&quot;第 1 部分：传统写法（没有 POM）&quot;)
+    print(&quot;─&quot; * 60)
+
+    # 第一步：搜索&quot;Python&quot;
+    page.goto(&quot;https://www.sogou.com&quot;, wait_until=&quot;domcontentloaded&quot;)
+    page.locator(&quot;#query&quot;).fill(&quot;Python&quot;)
+    page.keyboard.press(&quot;Enter&quot;)
+    page.wait_for_load_state(&quot;networkidle&quot;)
+    count1 = page.locator(&quot;.vrwrap&quot;).count()
+    print(f&quot;搜索 &#x27;Python&#x27; → {count1} 条结果&quot;)
+
+    # 第二步：搜索&quot;Java&quot;
+    page.goto(&quot;https://www.sogou.com&quot;, wait_until=&quot;domcontentloaded&quot;)
+    page.locator(&quot;#query&quot;).fill(&quot;Java&quot;)
+    page.keyboard.press(&quot;Enter&quot;)
+    page.wait_for_load_state(&quot;networkidle&quot;)
+    count2 = page.locator(&quot;.vrwrap&quot;).count()
+    print(f&quot;搜索 &#x27;Java&#x27; → {count2} 条结果&quot;)
+
+    # 第三步：搜索&quot;pytest&quot;
+    page.goto(&quot;https://www.sogou.com&quot;, wait_until=&quot;domcontentloaded&quot;)
+    page.locator(&quot;#query&quot;).fill(&quot;pytest&quot;)
+    page.keyboard.press(&quot;Enter&quot;)
+    page.wait_for_load_state(&quot;networkidle&quot;)
+    count3 = page.locator(&quot;.vrwrap&quot;).count()
+    print(f&quot;搜索 &#x27;pytest&#x27; → {count3} 条结果&quot;)
+
+    print(&quot;\n⚠ 问题：同样的逻辑重复了 3 遍&quot;)
+    print(&quot;  如果搜狗搜索框 id 从 &#x27;query&#x27; 改成 &#x27;q&#x27;，你要改 3 处！&quot;)
+
+    input(&quot;\n按回车键继续看 POM 写法...&quot;)
+
+    # ═══════════════════════════════════════════════════════════════
+    # 第 2 部分：POM 写法（用函数模拟页面对象）
+    # ═══════════════════════════════════════════════════════════════
+    print(&quot;\n&quot; + &quot;─&quot; * 60)
+    print(&quot;第 2 部分：POM 写法&quot;)
+    print(&quot;─&quot; * 60)
+
+    # ── 这就是一个简单的&quot;页面对象&quot; ──
+    # 把搜索框的定位、搜索操作封装在一起
+    def sogou_search(keyword):
+        &quot;&quot;&quot;搜狗搜索 — 封装了定位和操作&quot;&quot;&quot;
+        page.goto(&quot;https://www.sogou.com&quot;, wait_until=&quot;domcontentloaded&quot;)
+        page.locator(&quot;#query&quot;).fill(keyword)       # 定位只在这里写一次
+        page.keyboard.press(&quot;Enter&quot;)
+        page.wait_for_load_state(&quot;networkidle&quot;)
+        return page.locator(&quot;.vrwrap&quot;).count()     # 定位只在这里写一次
+
+    # 业务代码变得非常简洁
+    for kw in [&quot;Python&quot;, &quot;Java&quot;, &quot;pytest&quot;]:
+        count = sogou_search(kw)
+        print(f&quot;搜索 &#x27;{kw}&#x27; → {count} 条结果&quot;)
+
+    print(&quot;\n✅ 好处：同样的逻辑只写了一次&quot;)
+    print(&quot;  如果搜索框 id 改了，只需要改 sogou_search() 函数里的 1 处！&quot;)
+
+    input(&quot;\n按回车键继续...&quot;)
+
+    # ═══════════════════════════════════════════════════════════════
+    # 第 3 部分：真正的 POM（用类代替函数）
+    # ═══════════════════════════════════════════════════════════════
+    print(&quot;\n&quot; + &quot;─&quot; * 60)
+    print(&quot;第 3 部分：真正的 Page Object（类封装）&quot;)
+    print(&quot;─&quot; * 60)
+
+    # 导入真正的 Page Object 类
+    import sys
+    import os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), &quot;..&quot;))
+    from pages.sogou_page import SogouPage
+
+    # 用类的方式使用
+    sogou = SogouPage(page)
+    for kw in [&quot;Python&quot;, &quot;Java&quot;, &quot;pytest&quot;]:
+        count = sogou.search(kw)
+        print(f&quot;搜索 &#x27;{kw}&#x27; → {count} 条结果&quot;)
+
+    print(&quot;\n&quot; + &quot;=&quot; * 60)
+    print(&quot;&quot;&quot;
+    POM 总结：
+    ┌─────────────────────────────────────────────────────┐
+    │  传统写法：元素定位 + 操作逻辑 混在一起            │
+    │            改一个元素 → 改 N 个地方                │
+    │                                                      │
+    │  POM 写法：元素定位 → 集中在类顶部                  │
+    │            操作逻辑 → 封装为方法                    │
+    │            改一个元素 → 只改类里的 1 处             │
+    │                                                      │
+    │  面试回答：                                         │
+    │  &quot;POM 将每个页面封装为一个类，元素定位集中在类中， │
+    │   操作封装为方法。测试用例只调用方法，不关心定位。 │
+    │   好处是代码复用、易维护、可读性强。&quot;              │
+    └─────────────────────────────────────────────────────┘
+    &quot;&quot;&quot;)
+
+    time.sleep(2)
+    browser.close()
+    print(&quot;浏览器已关闭&quot;)</code></pre>
+</div>
+
+<h3 id="code-06">code/pages/sogou_page.py  —  POM：搜狗页面对象</h3>
+<div class="card">
+<pre><code>&quot;&quot;&quot;
+╔══════════════════════════════════════════════════════════════╗
+║  Page Object: 搜狗搜索页面（Playwright 版）                  ║
+║                                                              ║
+║  核心思想：                                                   ║
+║  1. 元素选择器 → 定义为类属性，集中在顶部                     ║
+║  2. 页面操作   → 封装为方法，对外暴露有意义的业务动作         ║
+║  3. 测试用例   → 只调用方法，不关心元素怎么定位               ║
+║                                                              ║
+║  面试考点：                                                   ║
+║  - 为什么元素定位要放在类属性而不是方法里？                   ║
+║    答：集中管理，改一处即可。也方便用常量命名体现语义。       ║
+║  - return self 是干什么的？                                   ║
+║    答：链式调用，让调用方可以写成 page.open().search(&quot;xx&quot;)    ║
+╚══════════════════════════════════════════════════════════════╝
+&quot;&quot;&quot;
+
+class SogouPage:
+    &quot;&quot;&quot;
+    搜狗搜索页面对象
+    
+    使用方式：
+        sogou = SogouPage(page)
+        count = sogou.search(&quot;Python&quot;)
+        first_title = sogou.get_first_result_title()
+    &quot;&quot;&quot;
+
+    # ═══════════════════════════════════════════════════════════════
+    # 元素选择器（集中管理，修改只改这里）
+    # ═══════════════════════════════════════════════════════════════
+    # Playwright 中直接用字符串表示选择器，比 Selenium 的 (By.XXX, &quot;值&quot;) 更简洁
+    
+    SEARCH_BOX = &quot;#query&quot;                # 搜索输入框（id=query）
+    SEARCH_BTN = &#x27;input[value=&quot;搜狗搜索&quot;]&#x27;  # 搜索按钮（备用）
+    RESULT_ITEM = &quot;.vrwrap&quot;              # 每条搜索结果的外壳
+    RESULT_TITLE = &quot;h3&quot;                  # 搜索结果标题（在 vrwrap 内）
+    RESULT_COUNT_TEXT = &quot;.num-tips&quot;      # &quot;找到约XX条结果&quot; 的文字
+
+    URL = &quot;https://www.sogou.com&quot;
+
+    def __init__(self, page):
+        &quot;&quot;&quot;
+        初始化页面对象
+        
+        参数:
+            page: Playwright 的 Page 对象（浏览器标签页）
+        &quot;&quot;&quot;
+        self.page = page
+
+    # ═══════════════════════════════════════════════════════════════
+    # 页面操作方法
+    # ═══════════════════════════════════════════════════════════════
+
+    def open(self):
+        &quot;&quot;&quot;打开搜狗首页&quot;&quot;&quot;
+        self.page.goto(self.URL, wait_until=&quot;domcontentloaded&quot;)
+        return self  # 返回 self 支持链式调用
+
+    def get_title(self):
+        &quot;&quot;&quot;获取当前页面标题&quot;&quot;&quot;
+        return self.page.title()
+
+    def input_keyword(self, keyword):
+        &quot;&quot;&quot;在搜索框输入关键词（不搜索）&quot;&quot;&quot;
+        self.page.locator(self.SEARCH_BOX).fill(keyword)
+        return self
+
+    def press_search(self):
+        &quot;&quot;&quot;按回车触发搜索，等待结果页加载完成&quot;&quot;&quot;
+        self.page.keyboard.press(&quot;Enter&quot;)
+        self.page.wait_for_load_state(&quot;networkidle&quot;)
+        return self
+
+    def search(self, keyword):
+        &quot;&quot;&quot;
+        组合操作：打开首页 → 输入关键词 → 按回车搜索 → 返回结果数量
+        
+        参数:
+            keyword: 搜索关键词
+        返回:
+            int: 搜索结果数量
+        &quot;&quot;&quot;
+        self.open()
+        self.input_keyword(keyword)
+        self.press_search()
+        return self.get_result_count()
+
+    def get_result_count(self):
+        &quot;&quot;&quot;获取当前页面搜索结果数量（vrwrap 的数量）&quot;&quot;&quot;
+        return self.page.locator(self.RESULT_ITEM).count()
+
+    def get_result_count_text(self):
+        &quot;&quot;&quot;获取搜狗显示的&quot;找到约XX条结果&quot;文字&quot;&quot;&quot;
+        return self.page.locator(self.RESULT_COUNT_TEXT).inner_text()
+
+    def get_first_result_title(self):
+        &quot;&quot;&quot;
+        获取第一条搜索结果的标题
+        
+        注意：搜狗第一个 vrwrap 可能是特殊卡片（游戏、百科等），
+        它的 HTML 结构和普通搜索结果不同，不一定有 h3 标签。
+        所以这里遍历所有 vrwrap，找到第一个包含 h3 的。
+        &quot;&quot;&quot;
+        results = self.page.locator(self.RESULT_ITEM).all()
+        for result in results:
+            try:
+                h3 = result.locator(self.RESULT_TITLE)
+                if h3.count() &gt; 0:
+                    return h3.first.inner_text()
+            except:
+                continue
+        return &quot;&quot;
+
+    def get_all_result_titles(self):
+        &quot;&quot;&quot;
+        获取所有搜索结果的标题列表
+        
+        返回:
+            list[str]: 标题文字列表
+        &quot;&quot;&quot;
+        titles = []
+        results = self.page.locator(self.RESULT_ITEM).all()
+        for result in results:
+            try:
+                title = result.locator(self.RESULT_TITLE).inner_text()
+                titles.append(title)
+            except:
+                pass
+        return titles
+
+
+# ═══════════════════════════════════════════════════════════════
+# Selenium 版本对照（面试用）
+# ═══════════════════════════════════════════════════════════════
+#
+# 同一个 SogouPage，Selenium 写法对比：
+#
+#   class SogouPage:
+#       SEARCH_BOX = (By.ID, &quot;query&quot;)           # 元素定位用元组
+#       RESULT_ITEM = (By.CSS_SELECTOR, &quot;.vrwrap&quot;)
+#       
+#       def __init__(self, driver):
+#           self.driver = driver
+#           self.wait = WebDriverWait(driver, 10)
+#       
+#       def search(self, keyword):
+#           self.driver.get(&quot;https://www.sogou.com&quot;)
+#           search_box = self.wait.until(
+#               EC.element_to_be_clickable(self.SEARCH_BOX)
+#           )
+#           search_box.send_keys(keyword + Keys.RETURN)
+#           self.wait.until(
+#               EC.presence_of_element_located(self.RESULT_ITEM)
+#           )
+#           return len(self.driver.find_elements(*self.RESULT_ITEM))
+#
+# 对比要点：
+#   - Playwright 选择器是字符串，Selenium 是 (By.XXX, &quot;值&quot;) 元组
+#   - Playwright 自动等待，Selenium 需要 WebDriverWait + EC
+#   - Playwright 用 page 对象，Selenium 用 driver 对象
+#   - 核心思想完全一样：选择器集中、操作封装</code></pre>
+</div>
+
+<h3 id="code-07">code/tests/test_sogou.py  —  pytest 测试用例</h3>
+<div class="card">
+<pre><code>&quot;&quot;&quot;
+╔══════════════════════════════════════════════════════════════╗
+║  测试用例：搜狗搜索功能测试（Playwright + pytest + POM）    ║
+║                                                              ║
+║  架构：                                                       ║
+║    test_sogou.py（测试用例）→ sogou_page.py（页面对象）      ║
+║    测试用例只写&quot;做什么&quot;，不关心&quot;怎么定位&quot;                   ║
+║                                                              ║
+║  运行方式：                                                   ║
+║    cd code/                                                  ║
+║    pytest tests/test_sogou.py -v                             ║
+║    pytest tests/test_sogou.py -v -m smoke   （只跑冒烟测试） ║
+║    pytest tests/test_sogou.py -v --tb=short  （简化错误输出） ║
+╚══════════════════════════════════════════════════════════════╝
+&quot;&quot;&quot;
+
+import pytest
+import sys
+import os
+
+# 添加项目根目录到路径，确保能 import pages 包
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), &quot;..&quot;))
+from pages.sogou_page import SogouPage
+
+
+# ═══════════════════════════════════════════════════════════════
+# 测试用例类
+# ═══════════════════════════════════════════════════════════════
+class TestSogouSearch:
+    &quot;&quot;&quot;搜狗搜索功能测试套件&quot;&quot;&quot;
+
+    def test_page_title(self, page):
+        &quot;&quot;&quot;
+        测试 1：打开搜狗首页，验证标题
+        
+        断言：标题包含&quot;搜狗&quot;
+        &quot;&quot;&quot;
+        sogou = SogouPage(page)
+        sogou.open()
+        title = sogou.get_title()
+        print(f&quot;页面标题: {title}&quot;)
+        assert &quot;搜狗&quot; in title, f&quot;标题应包含&#x27;搜狗&#x27;，实际: {title}&quot;
+
+    @pytest.mark.smoke
+    def test_search_has_results(self, page):
+        &quot;&quot;&quot;
+        测试 2（冒烟测试）：搜索关键词，验证有结果返回
+        
+        断言：搜索结果数量 &gt; 0
+        &quot;&quot;&quot;
+        sogou = SogouPage(page)
+        result_count = sogou.search(&quot;Python&quot;)
+        print(f&quot;搜索 &#x27;Python&#x27; → {result_count} 条结果&quot;)
+        assert result_count &gt; 0, &quot;搜索应该返回结果&quot;
+
+    @pytest.mark.smoke
+    def test_search_return_title(self, page):
+        &quot;&quot;&quot;
+        测试 3（冒烟测试）：搜索后，第一条结果标题不为空
+        
+        断言：第一条结果标题非空
+        &quot;&quot;&quot;
+        sogou = SogouPage(page)
+        sogou.search(&quot;Playwright&quot;)
+        first_title = sogou.get_first_result_title()
+        print(f&quot;第一条结果: {first_title}&quot;)
+        assert first_title != &quot;&quot;, &quot;第一条结果标题不应为空&quot;
+
+    @pytest.mark.parametrize(&quot;keyword&quot;, [
+        &quot;Python&quot;,
+        &quot;Java&quot;,
+        &quot;Selenium&quot;,
+    ])
+    def test_search_multiple_keywords(self, page, keyword):
+        &quot;&quot;&quot;
+        测试 4：数据驱动测试 — 多个关键词搜索
+        
+        @pytest.mark.parametrize 会让 pytest 自动为每组数据生成一个独立测试
+        运行时会看到 3 个测试结果：
+          test_search_multiple_keywords[Python]
+          test_search_multiple_keywords[Java]
+          test_search_multiple_keywords[Selenium]
+        
+        断言：每个关键词都能搜到结果
+        &quot;&quot;&quot;
+        sogou = SogouPage(page)
+        result_count = sogou.search(keyword)
+        print(f&quot;搜索 &#x27;{keyword}&#x27; → {result_count} 条结果&quot;)
+        assert result_count &gt; 0, f&quot;搜索 &#x27;{keyword}&#x27; 应该返回结果&quot;
+
+    def test_result_count_text(self, page):
+        &quot;&quot;&quot;
+        测试 5：验证结果数量文字显示
+        
+        断言：num-tips 中包含&quot;条&quot;字
+        &quot;&quot;&quot;
+        sogou = SogouPage(page)
+        sogou.search(&quot;自动化测试&quot;)
+        count_text = sogou.get_result_count_text()
+        print(f&quot;结果数量文字: {count_text}&quot;)
+        assert &quot;条&quot; in count_text, f&quot;结果数量文字应包含&#x27;条&#x27;，实际: {count_text}&quot;
+
+
+# ═══════════════════════════════════════════════════════════════
+# 如果直接运行本文件（不通过 pytest），执行冒烟测试
+# ═══════════════════════════════════════════════════════════════
+if __name__ == &quot;__main__&quot;:
+    # 只跑标记为 smoke 的测试（快速验证核心功能）
+    pytest.main([__file__, &quot;-v&quot;, &quot;-m&quot;, &quot;smoke&quot;, &quot;--tb=short&quot;])</code></pre>
+</div>
+
+<h3 id="code-08">code/pages/baidu_page_pw.py  —  POM：百度页面对象</h3>
+<div class="card">
+<pre><code>&quot;&quot;&quot;
+╔══════════════════════════════════════════════════════════════╗
+║  Page Object: 百度搜索页面（Playwright 版）                  ║
+║                                                              ║
+║  策略：直接拼搜索 URL，绕过百度首页的 AI/经典版切换问题      ║
+║  https://www.baidu.com/s?wd=关键词                           ║
+╚══════════════════════════════════════════════════════════════╝
+&quot;&quot;&quot;
+
+
+class BaiduPage:
+    &quot;&quot;&quot;百度搜索页面对象&quot;&quot;&quot;
+
+    # ═══════════════════════════════════════════════════════════
+    # 元素选择器
+    # ═══════════════════════════════════════════════════════════
+    # 百度搜索结果容器
+    RESULT_ITEM = &quot;.result.c-container&quot;
+
+    # 搜索 URL 模板
+    SEARCH_URL = &quot;https://www.baidu.com/s?wd={keyword}&quot;
+
+    HOME_URL = &quot;https://www.baidu.com&quot;
+
+    def __init__(self, page):
+        &quot;&quot;&quot;
+        初始化页面对象
+        
+        参数:
+            page: Playwright 的 Page 对象
+        &quot;&quot;&quot;
+        self.page = page
+
+    def open(self):
+        &quot;&quot;&quot;打开百度首页&quot;&quot;&quot;
+        self.page.goto(self.HOME_URL, wait_until=&quot;domcontentloaded&quot;)
+        return self
+
+    def get_title(self):
+        &quot;&quot;&quot;获取当前页面标题&quot;&quot;&quot;
+        return self.page.title()
+
+    def search(self, keyword):
+        &quot;&quot;&quot;
+        直接拼搜索 URL 搜索关键词，返回结果数量
+        
+        参数:
+            keyword: 搜索关键词
+        返回:
+            int: 搜索结果数量（被安全验证拦截时返回 0）
+        &quot;&quot;&quot;
+        # 直接访问搜索结果页
+        url = self.SEARCH_URL.format(keyword=keyword)
+        self.page.goto(url, wait_until=&quot;domcontentloaded&quot;)
+        
+        # 等待页面完全加载（用 networkidle 比 wait_for_selector 更宽松）
+        try:
+            self.page.wait_for_load_state(&quot;networkidle&quot;, timeout=15000)
+        except:
+            # 如果 networkidle 超时，再等 3 秒碰碰运气
+            self.page.wait_for_timeout(3000)
+        
+        # 数结果数量
+        return self.page.locator(self.RESULT_ITEM).count()
+
+
+# ═══════════════════════════════════════════════════════════════
+# Selenium 版本对照（面试用）
+# ═══════════════════════════════════════════════════════════════
+#
+#   class BaiduPage:
+#       RESULT_ITEM = (By.CSS_SELECTOR, &quot;.result.c-container&quot;)
+#       SEARCH_URL = &quot;https://www.baidu.com/s?wd={keyword}&quot;
+#       
+#       def __init__(self, driver):
+#           self.driver = driver
+#           self.wait = WebDriverWait(driver, 10)
+#       
+#       def search(self, keyword):
+#           url = self.SEARCH_URL.format(keyword=keyword)
+#           self.driver.get(url)
+#           try:
+#               self.wait.until(
+#                   EC.presence_of_element_located(self.RESULT_ITEM)
+#               )
+#           except:
+#               pass
+#           return len(self.driver.find_elements(*self.RESULT_ITEM))</code></pre>
+</div>
+
+<h3 id="code-09">code/day2/homework_pom.py  —  Day 2 POM 作业</h3>
+<div class="card">
+<pre><code>&quot;&quot;&quot;
+╔══════════════════════════════════════════════════════════════╗
+║  Day 2 作业：POM 实战（独立运行版）                          ║
+║                                                              ║
+║  使用 E 盘 Python 直接运行，无需依赖 TRAE 环境                ║
+║  运行方式：在普通 PowerShell 中执行                           ║
+║      E:\Python310\python.exe code\day2\homework_pom.py       ║
+╚══════════════════════════════════════════════════════════════╝
+&quot;&quot;&quot;
+
+from playwright.sync_api import sync_playwright
+import sys
+import os
+import time
+
+# 添加项目路径，确保能 import pages 包
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), &quot;..&quot;))
+
+from pages.baidu_page_pw import BaiduPage
+
+
+# ═══════════════════════════════════════════════════════════════
+# 启动浏览器
+# ═══════════════════════════════════════════════════════════════
+with sync_playwright() as p:
+    browser = p.chromium.launch(
+        channel=&quot;msedge&quot;,   # 使用系统 Edge 浏览器
+        headless=False,     # 显示窗口，方便观察
+    )
+    context = browser.new_context(
+        viewport={&quot;width&quot;: 1920, &quot;height&quot;: 1080},
+        user_agent=(
+            &quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) &quot;
+            &quot;AppleWebKit/537.36 (KHTML, like Gecko) &quot;
+            &quot;Chrome/120.0.0.0 Safari/537.36&quot;
+        ),
+        locale=&quot;zh-CN&quot;,
+        timezone_id=&quot;Asia/Shanghai&quot;,
+    )
+    page = context.new_page()
+
+    print(&quot;=&quot; * 60)
+    print(&quot;Day 2 作业：POM 实战&quot;)
+    print(&quot;=&quot; * 60)
+
+    # ═══════════════════════════════════════════════════════════
+    # 搜索 3 个关键词
+    # ═══════════════════════════════════════════════════════════
+    baidu = BaiduPage(page)
+    
+    for keyword in [&quot;Python&quot;, &quot;自动化测试&quot;, &quot;Playwright&quot;]:
+        count = baidu.search(keyword)
+        print(f&quot;搜索 &#x27;{keyword}&#x27; → {count} 条结果&quot;)
+        time.sleep(5)  # 间隔避免被百度拦截
+    
+    print(f&quot;\n✅ 3 个关键词搜索完成！&quot;)
+
+    time.sleep(3)
+    browser.close()
+    print(&quot;浏览器已关闭&quot;)</code></pre>
+</div>
+
+<h3 id="code-10">code/day2/05_waits_interview.py  —  元素等待面试题精讲</h3>
+<div class="card">
+<pre><code>&quot;&quot;&quot;
+╔══════════════════════════════════════════════════════════════╗
+║  Day 2 下午 - 第 1 节：元素等待（面试高频题）               ║
+║                                                              ║
+║  面试必问：隐式等待 vs 显式等待 vs 强制等待的区别            ║
+║  本脚本通过 3 种写法的对比，让你直观理解每种等待的适用场景    ║
+╚══════════════════════════════════════════════════════════════╝
+
+面试真题：
+  Q1: &quot;Selenium 中有哪几种等待方式？有什么区别？&quot;
+  Q2: &quot;Playwright 和 Selenium 在等待机制上有什么不同？&quot;
+  Q3: &quot;为什么不用 time.sleep()？&quot;
+&quot;&quot;&quot;
+
+# ═══════════════════════════════════════════════════════════════
+# 导入模块
+# ═══════════════════════════════════════════════════════════════
+from playwright.sync_api import sync_playwright  # Playwright 同步 API
+import time                                       # 用于强制等待 time.sleep()
+
+print(&quot;=&quot; * 60)
+print(&quot;  Day 2 下午：元素等待 — 面试题精讲&quot;)
+print(&quot;=&quot; * 60)
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(
+        channel=&quot;msedge&quot;,    # 使用系统自带的 Edge 浏览器
+        headless=False,      # 显示浏览器窗口，方便观察
+    )
+    context = browser.new_context(
+        viewport={&quot;width&quot;: 1920, &quot;height&quot;: 1080},
+        locale=&quot;zh-CN&quot;,
+    )
+    page = context.new_page()
+
+    # ═══════════════════════════════════════════════════════════
+    # 第 1 部分：不等待 — 演示&quot;为什么需要等待&quot;
+    # ═══════════════════════════════════════════════════════════
+    print(&quot;\n&quot; + &quot;─&quot; * 60)
+    print(&quot;第 1 部分：不等待（反面教材）&quot;)
+    print(&quot;─&quot; * 60)
+
+    # 直接访问搜狗搜索结果页，不等待加载完成就数结果
+    page.goto(&quot;https://www.sogou.com/web?query=Python&quot;)
+    # 注意：这里没有 wait_for_load_state()，也没有 wait_for_selector()
+
+    # 立刻数结果 — 页面可能还没加载完，结果很可能是 0
+    count_no_wait = page.locator(&quot;.vrwrap&quot;).count()
+    print(f&quot;不等待 → 找到 {count_no_wait} 条结果&quot;)
+    print(&quot;说明：页面还在加载中就数了，可能拿到 0&quot;)
+
+    input(&quot;\n按回车键进入第 2 部分...&quot;)
+
+    # ═══════════════════════════════════════════════════════════
+    # 第 2 部分：强制等待 time.sleep() — 能用但不推荐
+    # ═══════════════════════════════════════════════════════════
+    print(&quot;\n&quot; + &quot;─&quot; * 60)
+    print(&quot;第 2 部分：强制等待 time.sleep()&quot;)
+    print(&quot;─&quot; * 60)
+
+    start = time.time()  # 记录开始时间
+
+    # 重新访问搜索结果页
+    page.goto(&quot;https://www.sogou.com/web?query=Python&quot;)
+    time.sleep(5)  # 暴力等 5 秒，不管页面加载完没完
+
+    count_sleep = page.locator(&quot;.vrwrap&quot;).count()
+    elapsed = time.time() - start  # 计算实际耗时
+    print(f&quot;强制等待 5 秒 → 找到 {count_sleep} 条结果（耗时 {elapsed:.1f} 秒）&quot;)
+    print(&quot;说明：结果正确，但即使页面 1 秒就加载完了，也白白等了 5 秒&quot;)
+
+    input(&quot;\n按回车键进入第 3 部分...&quot;)
+
+    # ═══════════════════════════════════════════════════════════
+    # 第 3 部分：Playwright 正确等待 — 面试重点
+    # ═══════════════════════════════════════════════════════════
+    print(&quot;\n&quot; + &quot;─&quot; * 60)
+    print(&quot;第 3 部分：Playwright 正确等待&quot;)
+    print(&quot;─&quot; * 60)
+
+    start = time.time()
+
+    # 访问页面
+    page.goto(&quot;https://www.sogou.com/web?query=Python&quot;, wait_until=&quot;domcontentloaded&quot;)
+    # 解释：wait_until=&quot;domcontentloaded&quot; → 等 HTML 结构加载完就继续
+    #       不等到图片、CSS 等资源全部加载，比 &quot;load&quot; 更快
+
+    # 方法一：wait_for_selector — 等待某个元素出现在页面上
+    try:
+        page.wait_for_selector(&quot;.vrwrap&quot;, timeout=10000)
+        # 参数说明：
+        #   &quot;.vrwrap&quot;     = CSS 选择器，等待这个元素出现
+        #   timeout=10000 = 最多等 10 秒（10000 毫秒），超时就报错
+        count1 = page.locator(&quot;.vrwrap&quot;).count()
+        elapsed = time.time() - start
+        print(f&quot;wait_for_selector → 找到 {count1} 条结果（耗时 {elapsed:.1f} 秒）&quot;)
+    except Exception as e:
+        print(f&quot;wait_for_selector 超时：{e}&quot;)
+
+    # 方法二：wait_for_load_state — 等待页面加载状态
+    start = time.time()
+    page.goto(&quot;https://www.sogou.com/web?query=Python&quot;, wait_until=&quot;domcontentloaded&quot;)
+    page.wait_for_load_state(&quot;networkidle&quot;)
+    # 解释：&quot;networkidle&quot; = 网络空闲（没有正在进行的请求）
+    #       比 wait_for_selector 更宽松，不依赖具体元素
+    count2 = page.locator(&quot;.vrwrap&quot;).count()
+    elapsed = time.time() - start
+    print(f&quot;wait_for_load_state(&#x27;networkidle&#x27;) → 找到 {count2} 条结果（耗时 {elapsed:.1f} 秒）&quot;)
+
+    input(&quot;\n按回车键进入面试总结...&quot;)
+
+    # ═══════════════════════════════════════════════════════════
+    # 面试总结
+    # ═══════════════════════════════════════════════════════════
+    print(&quot;\n&quot; + &quot;=&quot; * 60)
+    print(&quot;&quot;&quot;
+    ╔══════════════════════════════════════════════════════════╗
+    ║              元素等待 — 面试标准答案                      ║
+    ╠══════════════════════════════════════════════════════════╣
+    ║                                                          ║
+    ║  Q: &quot;Selenium 中有哪几种等待方式？&quot;                      ║
+    ║                                                          ║
+    ║  A: 三种：                                               ║
+    ║  ① 强制等待：time.sleep(秒)                              ║
+    ║     ─ 无论元素是否出现，都等固定时间                      ║
+    ║     ─ 缺点：浪费时间，网络慢时可能不够                    ║
+    ║     ─ 面试时要说&quot;只在调试时用，正式代码不用&quot;              ║
+    ║                                                          ║
+    ║  ② 隐式等待：driver.implicitly_wait(秒)                  ║
+    ║     ─ 全局设置，对整个 driver 生命周期有效                ║
+    ║     ─ 查找元素时，如果没找到就等，直到超时                ║
+    ║     ─ 缺点：不够灵活，无法等待特定条件                    ║
+    ║                                                          ║
+    ║  ③ 显式等待：WebDriverWait(driver, 秒).until(条件)       ║
+    ║     ─ 针对特定元素/条件设置等待                           ║
+    ║     ─ 条件可以很灵活：元素可见、可点击、文本包含等        ║
+    ║     ─ 推荐：精确控制，不浪费时间                          ║
+    ║                                                          ║
+    ╠══════════════════════════════════════════════════════════╣
+    ║                                                          ║
+    ║  Q: &quot;Playwright 和 Selenium 在等待上有什么区别？&quot;        ║
+    ║                                                          ║
+    ║  A: Playwright 自带自动等待机制：                         ║
+    ║  ─ click() 前会自动等待元素可点击                        ║
+    ║  ─ fill() 前会自动等待元素可见                           ║
+    ║  ─ 操作前会自动等待元素脱离动画状态                      ║
+    ║  ─ 但页面跳转后仍需手动等待（wait_for_load_state）      ║
+    ║  ─ Selenium 需要手动设置隐式等待或显式等待               ║
+    ║                                                          ║
+    ╚══════════════════════════════════════════════════════════╝
+    &quot;&quot;&quot;)
+
+    input(&quot;按回车键关闭浏览器...&quot;)
+    browser.close()
+    print(&quot;浏览器已关闭&quot;)
+
+
+# ═══════════════════════════════════════════════════════════════
+# Selenium 版本对照（面试时可能被问到）
+# ═══════════════════════════════════════════════════════════════
+#
+# 【强制等待】
+#   import time
+#   time.sleep(5)  # 两个框架写法一样
+#
+# 【隐式等待 — Selenium 特有，Playwright 没有】
+#   from selenium import webdriver
+#   driver = webdriver.Chrome()
+#   driver.implicitly_wait(10)  # 全局设置，最多等 10 秒
+#   # 之后所有 find_element() 都会自动等待
+#
+# 【显式等待 — Selenium】
+#   from selenium.webdriver.support.ui import WebDriverWait
+#   from selenium.webdriver.support import expected_conditions as EC
+#   from selenium.webdriver.common.by import By
+#
+#   wait = WebDriverWait(driver, 10)  # 最多等 10 秒
+#   element = wait.until(
+#       EC.presence_of_element_located((By.CSS_SELECTOR, &quot;.vrwrap&quot;))
+#   )
+#   # 常用 EC 条件：
+#   #   EC.presence_of_element_located    → 元素存在于 DOM
+#   #   EC.visibility_of_element_located  → 元素可见
+#   #   EC.element_to_be_clickable        → 元素可点击
+#   #   EC.text_to_be_present_in_element  → 元素包含指定文本
+#
+# 【自动等待 — Playwright 特有】
+#   page.locator(&quot;#btn&quot;).click()  # 自动等待 #btn 可点击
+#   page.locator(&quot;#input&quot;).fill(&quot;hello&quot;)  # 自动等待 #input 可见
+#   # 不需要像 Selenium 那样手动设置显式等待</code></pre>
+</div>
+
+<h3 id="code-11">code/tests/conftest.py  —  pytest 全局配置</h3>
+<div class="card">
+<pre><code>&quot;&quot;&quot;
+╔══════════════════════════════════════════════════════════════╗
+║  conftest.py — pytest 全局配置（Playwright 版）              ║
+║                                                              ║
+║  面试常考：conftest.py 的作用是什么？                        ║
+║  答：                                                         ║
+║  1. 存放共享的 fixture，同级及子目录的测试文件均可使用       ║
+║  2. 无需手动 import，pytest 自动发现                         ║
+║  3. 可以定义 pytest 命令行选项、标记、钩子函数               ║
+║  4. 多层目录可以各自有 conftest.py，遵循就近原则             ║
+╚══════════════════════════════════════════════════════════════╝
+&quot;&quot;&quot;
+
+import pytest
+from playwright.sync_api import sync_playwright
+
+
+# ═══════════════════════════════════════════════════════════════
+# 自定义标记（用于 pytest -m 筛选测试）
+# ═══════════════════════════════════════════════════════════════
+def pytest_configure(config):
+    &quot;&quot;&quot;pytest 启动时自动执行，注册自定义标记&quot;&quot;&quot;
+    config.addinivalue_line(
+        &quot;markers&quot;, &quot;smoke: 冒烟测试（核心功能快速验证）&quot;
+    )
+    config.addinivalue_line(
+        &quot;markers&quot;, &quot;regression: 回归测试（完整功能验证）&quot;
+    )
+    config.addinivalue_line(
+        &quot;markers&quot;, &quot;slow: 慢速测试（耗时较长）&quot;
+    )
+
+
+# ═══════════════════════════════════════════════════════════════
+# Fixture：浏览器实例
+# ═══════════════════════════════════════════════════════════════
+@pytest.fixture(scope=&quot;function&quot;)
+def browser():
+    &quot;&quot;&quot;
+    每个测试函数独立创建一个浏览器实例
+    
+    scope=&quot;function&quot; → 每个测试函数独立，互不影响
+    scope=&quot;class&quot;    → 同一个测试类共享，减少启动开销
+    scope=&quot;session&quot;  → 整个测试会话共享，最快但要注意隔离
+    
+    yield 之前 = 测试前置（setup）
+    yield 之后 = 测试后置（teardown）
+    &quot;&quot;&quot;
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            channel=&quot;msedge&quot;,      # 使用系统 Edge
+            headless=False         # 显示窗口，方便观察
+        )
+        context = browser.new_context(
+            viewport={&quot;width&quot;: 1920, &quot;height&quot;: 1080}
+        )
+        yield browser, context    # 测试执行
+        # yield 之后自动执行 cleanup：
+        # context 和 browser 会随 with 语句自动关闭
+        # Playwright 的 sync_playwright() 上下文管理器会自动清理
+
+
+@pytest.fixture(scope=&quot;function&quot;)
+def page(browser):
+    &quot;&quot;&quot;
+    创建新页面（标签页）
+    
+    依赖 browser fixture，pytest 会自动先执行 browser 再执行 page
+    &quot;&quot;&quot;
+    b, ctx = browser
+    page = ctx.new_page()
+    yield page
+    # Playwright 自动管理页面生命周期，无需手动 close
+
+
+# ═══════════════════════════════════════════════════════════════
+# HTML 报告配置（如果安装了 pytest-html）
+# ═══════════════════════════════════════════════════════════════
+def pytest_html_report_title(report):
+    &quot;&quot;&quot;自定义 HTML 测试报告标题&quot;&quot;&quot;
+    report.title = &quot;UI 自动化测试报告 — 搜狗搜索&quot;</code></pre>
+</div>
+
 </div><!-- /container -->
 
 </body>
