@@ -248,14 +248,136 @@ mark.key {
   h2 { font-size: 1.2rem; }
 }
 
+/* ===== Sidebar Navigation ===== */
+.sidebar {
+  position: fixed;
+  top: 0; left: 0;
+  width: 240px;
+  height: 100vh;
+  background: var(--bg2);
+  border-right: 1px solid var(--rule);
+  overflow-y: auto;
+  z-index: 1000;
+  padding: 1rem 0;
+  box-shadow: 1px 0 8px rgba(0,0,0,0.04);
+}
+.sidebar-header {
+  padding: 0.5rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 0.5rem;
+}
+.sidebar-header h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--ink);
+}
+.sidebar-header .sub {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 0.15rem 0 0;
+}
+.sidebar nav a {
+  display: block;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+  transition: all 0.15s;
+  line-height: 1.4;
+}
+.sidebar nav a:hover {
+  color: var(--accent);
+  background: var(--code-bg);
+}
+.sidebar nav a.active {
+  color: var(--accent);
+  font-weight: 600;
+  border-left-color: var(--accent);
+  background: rgba(37,99,235,0.06);
+}
+.sidebar nav a .num {
+  display: inline-block;
+  width: 1.4rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* Adjust main content to make room for sidebar */
+.cover, .container {
+  margin-left: 240px;
+  max-width: calc(960px + 240px);
+}
+
+/* Hamburger toggle (mobile) */
+.sidebar-toggle {
+  display: none;
+  position: fixed;
+  top: 0.75rem; left: 0.75rem;
+  z-index: 2000;
+  background: var(--bg2);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  width: 38px; height: 38px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: var(--ink);
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile: hide sidebar, show toggle */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.25s;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .sidebar-toggle {
+    display: flex;
+  }
+  .cover, .container {
+    margin-left: 0;
+    max-width: 100%;
+  }
+  .container { padding: 1rem; }
+}
+
 /* ===== Print ===== */
 @media print {
   body { background: #fff; }
   .cover { border-bottom: 2px solid #000; }
+  .sidebar, .sidebar-toggle { display: none; }
+  .cover, .container { margin-left: 0; max-width: 100%; }
 }
 </style>
 </head>
 <body>
+
+<!-- ===== SIDEBAR ===== -->
+<button class="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')" title="菜单">☰</button>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h3>自动化测试学习</h3>
+    <p class="sub">环境配置 · 学习笔记 · 面试速记</p>
+  </div>
+  <nav>
+    <a href="#ch1"><span class="num">一</span>环境配置总览</a>
+    <a href="#ch2"><span class="num">二</span>安装步骤详解</a>
+    <a href="#ch3"><span class="num">三</span>跨设备使用指南</a>
+    <a href="#ch4"><span class="num">四</span>学习问答录</a>
+    <a href="#ch5"><span class="num">五</span>常见错误与解决</a>
+    <a href="#ch6"><span class="num">六</span>核心概念速查</a>
+    <a href="#ch7"><span class="num">七</span>项目文件结构</a>
+    <a href="#ch8"><span class="num">八</span>脱离TRAE独立运行</a>
+    <a href="#ch9"><span class="num">九</span>GitHub Pages部署</a>
+    <a href="#ch10"><span class="num">十</span>面试速记卡：等待</a>
+    <a href="#ch11"><span class="num">十一</span>全部代码参考</a>
+  </nav>
+</aside>
 
 <!-- ===== COVER ===== -->
 <div class="cover">
@@ -270,7 +392,7 @@ mark.key {
 <div class="container">
 
 <!-- ===== CHAPTER 1: 环境配置总览 ===== -->
-<h2>一、环境配置总览</h2>
+<h2 id="ch1">一、环境配置总览</h2>
 
 <p>以下是你需要安装的所有软件和包，以及它们的下载地址和用途。</p>
 
@@ -370,7 +492,7 @@ mark.key {
 </div>
 
 <!-- ===== CHAPTER 2: 安装步骤详解 ===== -->
-<h2>二、安装步骤详解</h2>
+<h2 id="ch2">二、安装步骤详解</h2>
 
 <h3>2.1 安装 Python（E 盘）</h3>
 <ol class="steps">
@@ -413,7 +535,7 @@ python -c "import pytest; import playwright; import selenium; print('全部 OK')
 }</code></pre>
 
 <!-- ===== CHAPTER 3: 跨设备使用指南 ===== -->
-<h2>三、跨设备使用指南</h2>
+<h2 id="ch3">三、跨设备使用指南</h2>
 
 <h3>3.1 如何在其他设备打开这个 HTML</h3>
 
@@ -456,7 +578,7 @@ python -c "import pytest; import playwright; import selenium; print('全部 OK')
 </ol>
 
 <!-- ===== CHAPTER 4: 学习问答录 ===== -->
-<h2>四、学习问答录</h2>
+<h2 id="ch4">四、学习问答录</h2>
 
 <h3>4.1 环境与工具</h3>
 
@@ -559,7 +681,7 @@ python -c "import pytest; import playwright; import selenium; print('全部 OK')
 </div>
 
 <!-- ===== CHAPTER 5: 常见错误与解决 ===== -->
-<h2>五、常见错误与解决</h2>
+<h2 id="ch5">五、常见错误与解决</h2>
 
 <h3>5.1 错误清单</h3>
 
@@ -643,7 +765,7 @@ pip list | findstr playwright               # 查看已安装的包</code></pre>
 </div>
 
 <!-- ===== CHAPTER 6: 核心概念速查 ===== -->
-<h2>六、核心概念速查</h2>
+<h2 id="ch6">六、核心概念速查</h2>
 
 <h3>6.1 8 种元素定位方式</h3>
 <div class="table-wrap">
@@ -700,7 +822,7 @@ pip list | findstr playwright               # 查看已安装的包</code></pre>
 </div>
 
 <!-- ===== CHAPTER 7: 项目结构 ===== -->
-<h2>七、项目文件结构</h2>
+<h2 id="ch7">七、项目文件结构</h2>
 <pre><code>ui-automation-course/
 ├── .vscode/
 │   └── settings.json          # VS Code 配置（Python 解释器路径）
@@ -725,7 +847,7 @@ pip list | findstr playwright               # 查看已安装的包</code></pre>
 └── ui-automation-course.html        # 课程 HTML 报告</code></pre>
 
 <!-- ===== CHAPTER 8: 独立运行 ===== -->
-<h2>八、脱离 TRAE 独立运行</h2>
+<h2 id="ch8">八、脱离 TRAE 独立运行</h2>
 <div class="card">
   <h4>在普通 PowerShell 中运行</h4>
   <pre><code># 1. 打开 PowerShell（Win+R → powershell）
@@ -751,7 +873,7 @@ E:\Python310\python.exe code\day2\homework_pom.py</code></pre>
 </div>
 
 <!-- ===== CHAPTER 9: GitHub Pages 部署实战 ===== -->
-<h2>九、GitHub Pages 部署实战</h2>
+<h2 id="ch9">九、GitHub Pages 部署实战</h2>
 
 <h3>9.1 背景：为什么最终选 GitHub Pages</h3>
 
@@ -997,7 +1119,7 @@ cd "C:\Users\sumy\AppData\Roaming\TRAE SOLO CN\ModularData\ai-agent\work-mode-pr
 </div>
 
 <!-- ===== CHAPTER 10: 面试速记卡 ===== -->
-<h2>十、面试速记卡：元素等待</h2>
+<h2 id="ch10">十、面试速记卡：元素等待</h2>
 
 <div class="card" style="margin-bottom:1.5rem;">
   <p style="margin:0;"><strong>面试官最常问的 3 道等待相关题</strong>，每题包含标准答案 + 追问应对 + 代码示例。</p>
@@ -1173,7 +1295,7 @@ print(count)  # 输出 10+</code></pre>
 </div>
 
 <!-- ===== CHAPTER 11: 全部代码参考 ===== -->
-<h2 id="code-ref">十一、全部代码参考</h2>
+<h2 id="ch11" id="code-ref">十一、全部代码参考</h2>
 
 <div class="card" style="margin-bottom:1.5rem;">
   <p style="margin:0;">以下是课程中所有脚本的完整代码，含详细注释。共 <strong>10 个文件</strong>，按学习顺序排列。</p>
@@ -2637,5 +2759,30 @@ def pytest_html_report_title(report):
 
 </div><!-- /container -->
 
+<script>
+(function() {
+  // Scroll-spy: highlight active sidebar link
+  var sections = document.querySelectorAll('h2[id]');
+  var links = document.querySelectorAll('.sidebar nav a');
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        links.forEach(function(a) {
+          a.classList.toggle('active', a.getAttribute('href') === '#' + entry.target.id);
+        });
+      }
+    });
+  }, { rootMargin: '-80px 0px -70% 0px' });
+
+  sections.forEach(function(s) { observer.observe(s); });
+
+  // Close sidebar on mobile when clicking a link
+  links.forEach(function(a) {
+    a.addEventListener('click', function() {
+      document.getElementById('sidebar').classList.remove('open');
+    });
+  });
+})();
+</script>
 </body>
 </html>
