@@ -376,6 +376,11 @@ mark.key {
     <a href="#ch9"><span class="num">九</span>GitHub Pages部署</a>
     <a href="#ch10"><span class="num">十</span>面试速记卡：等待</a>
     <a href="#ch11"><span class="num">十一</span>全部代码参考</a>
+    <a href="#ch12"><span class="num">十二</span>pytest 框架与 Fixture</a>
+    <a href="#ch13"><span class="num">十三</span>数据驱动测试</a>
+    <a href="#ch14"><span class="num">十四</span>Allure 测试报告</a>
+    <a href="#ch15"><span class="num">十五</span>CDP vs Launch</a>
+    <a href="#ch16"><span class="num">十六</span>面试考点扩展</a>
   </nav>
 </aside>
 
@@ -2755,6 +2760,312 @@ def page(browser):
 def pytest_html_report_title(report):
     &quot;&quot;&quot;自定义 HTML 测试报告标题&quot;&quot;&quot;
     report.title = &quot;UI 自动化测试报告 — 搜狗搜索&quot;</code></pre>
+</div>
+
+<!-- ===== CHAPTER 12: pytest 框架与 Fixture ===== -->
+<h2 id="ch12">十二、pytest 框架与 Fixture 机制</h2>
+
+<div class="card">
+  <h3 style="margin-top:0;">pytest 的职责</h3>
+  <p>pytest 不操作浏览器，它只做三件事：<strong>发现测试 → 运行测试 → 报告结果</strong>。Playwright 负责操作浏览器，pytest 负责组织和运行测试用例。</p>
+</div>
+
+<h3>12.1 测试发现规则</h3>
+<div class="card">
+  <ul>
+    <li>文件名以 <code>test_</code> 开头或 <code>_test</code> 结尾</li>
+    <li>函数名以 <code>test_</code> 开头</li>
+    <li>类名以 <code>Test</code> 开头（不含 <code>__init__</code>）</li>
+  </ul>
+</div>
+
+<h3>12.2 pytest 命令速查</h3>
+<div class="table-wrap">
+<table>
+<tr><th>命令</th><th>作用</th></tr>
+<tr><td><code>pytest tests/ -v</code></td><td>跑 tests/ 下所有测试，verbose 模式</td></tr>
+<tr><td><code>pytest tests/test_file.py -v</code></td><td>只跑一个文件</td></tr>
+<tr><td><code>pytest tests/ -k "search"</code></td><td>只跑名字含 "search" 的测试</td></tr>
+<tr><td><code>pytest tests/ -m "smoke"</code></td><td>只跑标记了 @pytest.mark.smoke 的测试</td></tr>
+<tr><td><code>pytest tests/ --collect-only</code></td><td>只收集不执行（看有哪些用例）</td></tr>
+<tr><td><code>pytest tests/ -s</code></td><td>不捕获 print 输出（调试用）</td></tr>
+<tr><td><code>pytest tests/ --maxfail=2</code></td><td>失败 2 个就停</td></tr>
+<tr><td><code>pytest tests/ -v --tb=short</code></td><td>失败时显示简短堆栈</td></tr>
+<tr><td><code>pytest tests/ --html=report.html</code></td><td>生成 HTML 报告（需 pytest-html）</td></tr>
+<tr><td><code>pytest tests/ --alluredir=allure-results</code></td><td>生成 Allure 原始数据</td></tr>
+</table>
+</div>
+
+<h3>12.3 Fixture 机制</h3>
+<p>Fixture 是 pytest 的<strong>依赖注入机制</strong>。测试函数声明需要什么参数，pytest 自动从 conftest.py 找对应的 fixture 并注入。</p>
+
+<div class="table-wrap">
+<table>
+<tr><th>scope</th><th>生命周期</th><th>适用场景</th></tr>
+<tr><td><code>function</code></td><td>每个测试函数执行一次</td><td>page（每个测试独立标签页）</td></tr>
+<tr><td><code>class</code></td><td>每个测试类执行一次</td><td>测试类共享的登录状态</td></tr>
+<tr><td><code>module</code></td><td>每个 .py 文件执行一次</td><td>模块级别的测试数据准备</td></tr>
+<tr><td><code>session</code></td><td>整个测试会话执行一次</td><td>browser（一个浏览器跑完全部测试）</td></tr>
+</table>
+</div>
+
+<h3>12.4 yield 机制</h3>
+<div class="card">
+<pre><code>@pytest.fixture(scope="function")
+def page(browser):
+    # yield 之前 = setup（测试前置）
+    b, ctx = browser
+    page = ctx.new_page()
+    yield page
+    # yield 之后 = teardown（测试后置）
+    page.close()</code></pre>
+</div>
+
+<h3>12.5 conftest.py 面试常考</h3>
+<div class="card" style="border-left: 4px solid #8b5cf6;">
+  <h4 style="margin-top:0;color:#8b5cf6;">Q: conftest.py 的作用是什么？</h4>
+  <ol>
+    <li>存放共享的 fixture，同级及子目录的测试文件均可使用</li>
+    <li>无需手动 import，pytest 自动发现</li>
+    <li>可以定义 pytest 命令行选项、标记、钩子函数</li>
+    <li>多层目录可以各自有 conftest.py，遵循就近原则</li>
+  </ol>
+</div>
+
+<div class="card">
+  <h4 style="margin-top:0;">conftest.py 核心内容概览</h4>
+<pre><code>import pytest
+import allure
+from playwright.sync_api import sync_playwright
+
+# 1. 注册自定义标记
+def pytest_configure(config):
+    config.addinivalue_line("markers", "smoke: 冒烟测试")
+
+# 2. browser fixture（session 级别，启动一次）
+@pytest.fixture(scope="session")
+def browser():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(channel="msedge", headless=False)
+        context = browser.new_context()
+        yield browser, context
+        context.close()
+        browser.close()
+
+# 3. page fixture（function 级别，每个测试独立）
+@pytest.fixture(scope="function")
+def page(browser):
+    b, ctx = browser
+    page = ctx.new_page()
+    yield page
+    page.close()
+
+# 4. 失败自动截图（Allure 集成）
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    outcome = yield
+    if outcome.get_result().failed and call.when == "call":
+        page = item.funcargs.get("page")
+        if page:
+            allure.attach(
+                page.screenshot(full_page=True),
+                name="失败截图",
+                attachment_type=allure.attachment_type.PNG
+            )</code></pre>
+</div>
+
+<!-- ===== CHAPTER 13: 数据驱动测试 ===== -->
+<h2 id="ch13">十三、数据驱动测试</h2>
+
+<h3>13.1 @pytest.mark.parametrize 语法</h3>
+<div class="card">
+<pre><code>@pytest.mark.parametrize("参数名1,参数名2", [
+    (值1, 值2),
+    (值3, 值4),
+])
+def test_search(keyword, expected_min, page):
+    # 每个参数组合生成一个独立测试用例
+    count = sogou.search(keyword)
+    assert count >= expected_min</code></pre>
+</div>
+
+<h3>13.2 运行效果</h3>
+<p>pytest 会把 1 个函数展开成多个独立用例：</p>
+<div class="card">
+<pre><code>test_data_driven.py::test_search[Python-5] PASSED
+test_data_driven.py::test_search[自动化测试-3] PASSED
+test_data_driven.py::test_search[Playwright-3] PASSED</code></pre>
+</div>
+
+<h3>13.3 从外部文件读取数据</h3>
+<div class="card">
+<pre><code>import json
+with open("test_data.json") as f:
+    data = json.load(f)
+@pytest.mark.parametrize("keyword,expected_min", data)</code></pre>
+</div>
+
+<!-- ===== CHAPTER 14: Allure 测试报告 ===== -->
+<h2 id="ch14">十四、Allure 测试报告</h2>
+
+<div class="card">
+  <h3 style="margin-top:0;">Allure 是什么</h3>
+  <p>Allure 是一个测试报告框架，能把 pytest 的测试结果生成<strong>可视化 HTML 报告</strong>，包含测试步骤、失败截图、耗时统计、趋势图等。</p>
+</div>
+
+<h3>14.1 日常使用三步骤</h3>
+<div class="card">
+<pre><code># 步骤 1：跑测试，生成 JSON 原始数据
+pytest tests/ -v --alluredir=allure-results
+
+# 步骤 2：把 JSON 转成 HTML 报告
+allure generate allure-results -o allure-report --clean
+
+# 步骤 3：在浏览器中查看
+allure open allure-report</code></pre>
+</div>
+
+<h3>14.2 Allure 注解速查</h3>
+<div class="table-wrap">
+<table>
+<tr><th>注解</th><th>作用</th><th>示例</th></tr>
+<tr><td><code>@allure.feature("功能")</code></td><td>大功能模块</td><td><code>@allure.feature("搜索功能")</code></td></tr>
+<tr><td><code>@allure.story("场景")</code></td><td>功能下的子场景</td><td><code>@allure.story("基础搜索")</code></td></tr>
+<tr><td><code>@allure.severity(级别)</code></td><td>严重程度</td><td><code>@allure.severity(allure.severity_level.CRITICAL)</code></td></tr>
+<tr><td><code>@allure.step("描述")</code></td><td>报告中的步骤节点</td><td><code>with allure.step("打开首页"):</code></td></tr>
+<tr><td><code>@allure.title("标题")</code></td><td>自定义用例标题</td><td><code>@allure.title("搜索关键词验证")</code></td></tr>
+<tr><td><code>@allure.description("")</code></td><td>用例描述</td><td><code>@allure.description("验证搜索返回足够结果")</code></td></tr>
+<tr><td><code>@allure.tag("标签")</code></td><td>标签（筛选用）</td><td><code>@allure.tag("smoke", "search")</code></td></tr>
+<tr><td><code>@allure.link("url")</code></td><td>关联链接</td><td><code>@allure.link("https://...", name="首页")</code></td></tr>
+<tr><td><code>@allure.issue("BUG-1")</code></td><td>关联缺陷</td><td><code>@allure.issue("BUG-001")</code></td></tr>
+<tr><td><code>allure.attach(内容, ...)</code></td><td>附加文件/截图/文本</td><td><code>allure.attach(screenshot, name="失败截图", ...)</code></td></tr>
+</table>
+</div>
+
+<h3>14.3 严重级别</h3>
+<div class="table-wrap">
+<table>
+<tr><th>级别</th><th>含义</th><th>示例</th></tr>
+<tr><td><code>BLOCKER</code></td><td>阻塞：系统无法运行</td><td>登录功能完全失效</td></tr>
+<tr><td><code>CRITICAL</code></td><td>致命：核心功能不可用</td><td>搜索没结果</td></tr>
+<tr><td><code>NORMAL</code></td><td>普通：一般功能验证</td><td>常规搜索测试</td></tr>
+<tr><td><code>MINOR</code></td><td>轻微：UI 样式问题</td><td>按钮颜色偏差</td></tr>
+<tr><td><code>TRIVIAL</code></td><td>无关紧要</td><td>拼写错误</td></tr>
+</table>
+</div>
+
+<h3>14.4 完整 Allure 测试示例</h3>
+<div class="card">
+<pre><code>import allure
+import pytest
+from pages.sogou_page import SogouPage
+
+@allure.feature("搜索功能")
+@allure.story("基础搜索")
+@allure.severity(allure.severity_level.CRITICAL)
+@allure.title("搜索关键词返回结果数不低于预期")
+@allure.tag("smoke")
+@pytest.mark.parametrize("keyword,expected_min", [
+    ("Python", 3),
+    ("自动化测试", 3),
+])
+def test_search_with_allure(keyword, expected_min, page):
+    with allure.step(f"搜索「{keyword}」"):
+        sogou = SogouPage(page)
+        count = sogou.search(keyword)
+
+    with allure.step("验证结果数量"):
+        allure.attach(
+            f"关键词: {keyword}\n实际结果: {count}",
+            name=f"搜索「{keyword}」详情",
+            attachment_type=allure.attachment_type.TEXT
+        )
+        assert count >= expected_min</code></pre>
+</div>
+
+<!-- ===== CHAPTER 15: CDP vs Launch ===== -->
+<h2 id="ch15">十五、CDP vs Launch 模式详解</h2>
+
+<div class="table-wrap">
+<table>
+<tr><th>维度</th><th>Launch（标准模式）</th><th>CDP（调试模式）</th></tr>
+<tr><td>谁启动浏览器</td><td>Playwright 自动</td><td>你手动或用 subprocess</td></tr>
+<tr><td>代码</td><td><code>p.chromium.launch(channel="msedge")</code></td><td><code>p.chromium.connect_over_cdp("http://127.0.0.1:9222")</code></td></tr>
+<tr><td>浏览器生命周期</td><td>Playwright 管理（自动关）</td><td>你管理（手动关）</td></tr>
+<tr><td>复杂度</td><td>一行代码</td><td>几十行 subprocess 管理</td></tr>
+<tr><td>适用场景</td><td>正常开发（推荐）</td><td>沙箱环境绕过限制</td></tr>
+</table>
+</div>
+
+<div class="card" style="border-left: 4px solid var(--accent2);">
+  <p style="margin:0;"><strong>结论：</strong>正常情况下用 Launch。CDP 是给 TRAE 沙箱这种特殊环境用的变通方案，你的 VS Code 终端直接用 Launch 就行。</p>
+</div>
+
+<!-- ===== CHAPTER 16: 面试考点扩展 ===== -->
+<h2 id="ch16">十六、面试考点扩展</h2>
+
+<div class="qa-item">
+  <div class="q">Q: fixture 的 scope 有哪几种？</div>
+  <div class="a">
+    <p>function（每个测试）、class（每个类）、module（每个文件）、session（整个会话）。<br>
+    面试时要能说出各自的适用场景：session 放浏览器启动，function 放页面创建。</p>
+  </div>
+</div>
+
+<div class="qa-item">
+  <div class="q">Q: @pytest.mark.parametrize 的作用和语法？</div>
+  <div class="a">
+    <p>把一个测试函数展开成多个独立用例，每组参数跑一次。<br>
+    语法：<code>@pytest.mark.parametrize("参数名", [(值1,), (值2,)])</code></p>
+  </div>
+</div>
+
+<div class="qa-item">
+  <div class="q">Q: POM 的核心思想是什么？</div>
+  <div class="a">
+    <p>每个页面封装成类，选择器集中管理，操作封装为方法。测试只调用方法，不关心元素定位。好处：改一处生效全局，测试代码可读性高，页面逻辑和测试逻辑分离。</p>
+  </div>
+</div>
+
+<div class="qa-item">
+  <div class="q">Q: Playwright 和 Selenium 的主要区别？</div>
+  <div class="a">
+    <ol>
+      <li><strong>自动等待</strong> vs 手动等待（WebDriverWait）</li>
+      <li><strong>内置驱动</strong>（playwright install）vs 独立下载对应版本 driver</li>
+      <li><strong>字符串选择器</strong>（"#id"）vs 元组选择器（By.ID, "id"）</li>
+      <li><strong>原生多标签页</strong>支持（context + page）vs 手动切换 window handle</li>
+    </ol>
+  </div>
+</div>
+
+<div class="qa-item">
+  <div class="q">Q: Allure 中 feature 和 story 的区别？</div>
+  <div class="a">
+    <p>feature 是大功能模块（如"搜索"），story 是功能下的具体场景（如"基础搜索"、"高级搜索"）。报告里按 feature → story 分组展示。</p>
+  </div>
+</div>
+
+<div class="qa-item">
+  <div class="q">Q: pip install 和手动下载解压，什么时候需要配环境变量？为什么？</div>
+  <div class="a">
+    <p>pip install 不需要，因为可执行文件放到 Scripts 目录（已在 PATH）。手动解压的需要，因为系统不知道你放哪了。举例：pytest 不需配 PATH，Allure CLI 需要配 PATH。</p>
+  </div>
+</div>
+
+<div class="qa-item">
+  <div class="q">Q: 改了环境变量后命令还不识别，怎么办？</div>
+  <div class="a">
+    <p>当前终端窗口不会自动刷新 PATH。关掉重开终端，或执行：<br>
+    <code>$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")</code></p>
+  </div>
+</div>
+
+<div class="qa-item">
+  <div class="q">Q: Launch 模式和 CDP 模式的区别？什么时候用哪个？</div>
+  <div class="a">
+    <p>Launch 是 Playwright 自动管理浏览器（一行代码），CDP 是你手动启动浏览器再连接。正常开发用 Launch，只有沙箱环境（如 TRAE 内置终端）限制系统调用时才用 CDP 变通。</p>
+  </div>
 </div>
 
 </div><!-- /container -->
