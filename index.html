@@ -379,8 +379,7 @@ mark.key {
     <a href="#ch12"><span class="num">十二</span>pytest 框架与 Fixture</a>
     <a href="#ch13"><span class="num">十三</span>数据驱动测试</a>
     <a href="#ch14"><span class="num">十四</span>Allure 测试报告</a>
-    <a href="#ch15"><span class="num">十五</span>CDP vs Launch</a>
-    <a href="#ch16"><span class="num">十六</span>面试考点扩展</a>
+    <a href="#ch15"><span class="num">十五</span>面试考点扩展</a>
   </nav>
 </aside>
 
@@ -594,7 +593,7 @@ python -c "import pytest; import playwright; import selenium; print('全部 OK')
 
 <div class="qa-item">
   <div class="q">TRAE 自带的 Python 和我自己下载的 Python 有什么区别？</div>
-  <div class="a"><strong>解释器完全相同</strong>，都是 Python 3.10.11。区别在于：<br>① 安装位置不同（C 盘 vs E 盘）<br>② 包管理独立（各自有自己的 <code>site-packages</code>）<br>③ TRAE Python 在 TRAE 环境中可以正常调用 Playwright 的 <code>mkdtemp</code>（沙箱信任），E 盘 Python 则被限制</div>
+  <div class="a"><strong>解释器完全相同</strong>，都是 Python 3.10.11。区别在于：<br>① 安装位置不同（C 盘 vs E 盘）<br>② 包管理独立（各自有自己的 <code>site-packages</code>）</div>
 </div>
 
 <div class="qa-item">
@@ -711,14 +710,6 @@ python -c "import pytest; import playwright; import selenium; print('全部 OK')
   <div class="a">
     <strong>原因：</strong>VS Code 终端用的是旧的 Python 环境（没有装 playwright 的那个）。<br>
     <strong>解决：</strong>关掉旧终端 → 新建终端（<code>Ctrl+Shift+`</code>）→ 重载窗口（<code>Ctrl+Shift+P</code> → Reload Window）。
-  </div>
-</div>
-
-<div class="qa-item">
-  <div class="q"><code>EPERM: operation not permitted, mkdtemp</code>（E 盘 Python）</div>
-  <div class="a">
-    <strong>原因：</strong>TRAE 沙箱限制了非 TRAE 进程的 <code>mkdtemp</code> 系统调用。Playwright 内部（Node.js 驱动）需要用它创建临时目录。<br>
-    <strong>解决：</strong>在 TRAE 环境内用 TRAE 自带的 Python；在非 TRAE 环境（普通 PowerShell/VS Code）用 E 盘 Python，此时没有沙箱限制。
   </div>
 </div>
 
@@ -874,7 +865,7 @@ E:\Python310\python.exe code\day2\homework_pom.py</code></pre>
 </div>
 
 <div class="callout tip">
-  <strong>💡 关键结论：</strong>你的代码、Python、VS Code 都是独立的。TRAE 只是一个 AI 助手，关闭 TRAE 后，用普通 VS Code 打开同一个项目文件夹，一切照常运行。TRAE 沙箱的 <code>mkdtemp</code> 限制只影响 TRAE 内部运行，不影响你的独立环境。
+  <strong>💡 关键结论：</strong>你的代码、Python、VS Code 都是独立的。关闭 TRAE 后，用普通 VS Code 打开同一个项目文件夹，一切照常运行。
 </div>
 
 <!-- ===== CHAPTER 9: GitHub Pages 部署实战 ===== -->
@@ -2983,26 +2974,8 @@ def test_search_with_allure(keyword, expected_min, page):
         assert count >= expected_min</code></pre>
 </div>
 
-<!-- ===== CHAPTER 15: CDP vs Launch ===== -->
-<h2 id="ch15">十五、CDP vs Launch 模式详解</h2>
-
-<div class="table-wrap">
-<table>
-<tr><th>维度</th><th>Launch（标准模式）</th><th>CDP（调试模式）</th></tr>
-<tr><td>谁启动浏览器</td><td>Playwright 自动</td><td>你手动或用 subprocess</td></tr>
-<tr><td>代码</td><td><code>p.chromium.launch(channel="msedge")</code></td><td><code>p.chromium.connect_over_cdp("http://127.0.0.1:9222")</code></td></tr>
-<tr><td>浏览器生命周期</td><td>Playwright 管理（自动关）</td><td>你管理（手动关）</td></tr>
-<tr><td>复杂度</td><td>一行代码</td><td>几十行 subprocess 管理</td></tr>
-<tr><td>适用场景</td><td>正常开发（推荐）</td><td>沙箱环境绕过限制</td></tr>
-</table>
-</div>
-
-<div class="card" style="border-left: 4px solid var(--accent2);">
-  <p style="margin:0;"><strong>结论：</strong>正常情况下用 Launch。CDP 是给 TRAE 沙箱这种特殊环境用的变通方案，你的 VS Code 终端直接用 Launch 就行。</p>
-</div>
-
-<!-- ===== CHAPTER 16: 面试考点扩展 ===== -->
-<h2 id="ch16">十六、面试考点扩展</h2>
+<!-- ===== CHAPTER 15: 面试考点扩展 ===== -->
+<h2 id="ch15">十五、面试考点扩展</h2>
 
 <div class="qa-item">
   <div class="q">Q: fixture 的 scope 有哪几种？</div>
@@ -3059,15 +3032,6 @@ def test_search_with_allure(keyword, expected_min, page):
     <p>当前终端窗口不会自动刷新 PATH。关掉重开终端，或执行：<br>
     <code>$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")</code></p>
   </div>
-</div>
-
-<div class="qa-item">
-  <div class="q">Q: Launch 模式和 CDP 模式的区别？什么时候用哪个？</div>
-  <div class="a">
-    <p>Launch 是 Playwright 自动管理浏览器（一行代码），CDP 是你手动启动浏览器再连接。正常开发用 Launch，只有沙箱环境（如 TRAE 内置终端）限制系统调用时才用 CDP 变通。</p>
-  </div>
-</div>
-
 </div><!-- /container -->
 
 <script>
