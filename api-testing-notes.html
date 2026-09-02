@@ -44,6 +44,16 @@ footer { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.85
 .file-tree .dir { color: var(--accent2); font-weight: 600; }
 .file-tree .file { color: var(--ink); }
 .file-tree .comment { color: var(--muted); }
+/* 回到顶部按钮 */
+#top-btn { position: fixed; bottom: 2rem; right: 2rem; width: 44px; height: 44px; background: var(--accent); color: #fff; border: none; border-radius: 50%; font-size: 1.3rem; cursor: pointer; opacity: 0; visibility: hidden; transition: all 0.3s; z-index: 999; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+#top-btn.show { opacity: 1; visibility: visible; }
+#top-btn:hover { background: var(--accent2); transform: translateY(-2px); }
+/* 学习路径步骤 */
+.steps { counter-reset: step; list-style: none; padding: 0; }
+.steps li { counter-increment: step; padding: 0.6rem 0 0.6rem 2.5rem; position: relative; border-left: 2px solid var(--rule); margin-left: 1rem; }
+.steps li::before { content: counter(step); position: absolute; left: -1rem; top: 0.5rem; width: 1.8rem; height: 1.8rem; background: var(--accent); color: #fff; border-radius: 50%; text-align: center; line-height: 1.8rem; font-size: 0.8rem; font-weight: 700; }
+.steps li:last-child { border-left-color: transparent; }
+.steps .code { font-family: monospace; font-size: 0.85em; background: #e9ecef; padding: 0.1em 0.4em; border-radius: 3px; }
 @media (max-width: 600px) { section { padding: 1rem; } }
 </style>
 </head>
@@ -54,10 +64,11 @@ footer { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.85
 </header>
 
 <nav>
-  <a href="#am">上午：HTTP 基础 + 第一个接口测试</a>
-  <a href="#pm">下午：分层设计 + 完整项目实战</a>
+  <a href="#am">上午：HTTP 基础</a>
+  <a href="#pm">下午：项目实战</a>
+  <a href="#vs-postman">Python vs Postman</a>
+  <a href="#interview">面试题</a>
   <a href="#env">环境</a>
-  <a href="#setup">安装</a>
   <a href="#run">运行</a>
 </nav>
 
@@ -119,6 +130,19 @@ allure open allure-report</code></pre>
 <!-- ============================================================ -->
 <section id="am">
   <h2><span class="day-badge">上午 3h</span>HTTP 基础 + 第一个接口测试</h2>
+
+  <div class="card" style="background:#eef2ff;border:1px solid var(--accent);">
+    <strong>上午学习路径（按顺序看）：</strong>
+    <ol class="steps">
+      <li>先看文档：本章 1~4 节（HTTP 基础概念，看懂就行）</li>
+      <li>再看文档：本章 5 节（requests 库怎么用）</li>
+      <li><strong>重点学习：</strong>本章「断言详解」，理解 <span class="code">assert</span> 是什么</li>
+      <li>动手写：本章 6 节「第一个接口测试脚本」，复制到 VS Code 运行</li>
+      <li>查看代码：打开 <span class="code">api_client/jsonplaceholder_client.py</span>，理解 Client 层结构</li>
+      <li>查看代码：打开 <span class="code">tests/conftest.py</span>，理解 client fixture</li>
+      <li>运行测试：<span class="code">E:\Python310\python.exe -m pytest code/tests/test_get_requests.py -v</span></li>
+    </ol>
+  </div>
 
   <h3>1. 什么是接口测试？</h3>
   <p>接口测试的本质就是<strong>发送 HTTP 请求，验证 HTTP 响应</strong>。不需要浏览器，不需要打开网页，直接对后端接口发请求、看返回结果。</p>
@@ -203,6 +227,52 @@ for post in data:
 
 print("全部断言通过！")</code></pre>
   <p>保存为 <code>test_demo.py</code>，在终端运行 <code>python test_demo.py</code>，没有报错就是通过。</p>
+
+  <h3>断言详解（重点！）</h3>
+  <p><code>assert</code> 是 Python 的内置关键字，翻译过来就是"<strong>我断言这个东西一定是这样，如果不是就报错</strong>"。</p>
+
+  <h4>语法</h4>
+  <pre><code>assert 条件, "条件不满足时显示的错误信息"</code></pre>
+
+  <h4>最简单的例子</h4>
+  <pre><code>x = 5
+assert x == 5          # 条件成立，什么都不发生，继续往下走
+assert x == 10         # 条件不成立，报错：AssertionError</code></pre>
+
+  <h4>接口测试中 assert 的 5 种用法</h4>
+  <table>
+    <tr><th>用法</th><th>代码</th><th>含义</th></tr>
+    <tr><td>① 断言相等</td><td><code>assert response.status_code == 200</code></td><td>状态码一定是 200</td></tr>
+    <tr><td>② 断言包含</td><td><code>assert "title" in data</code></td><td>data 里一定有 "title" 这个键</td></tr>
+    <tr><td>③ 断言类型</td><td><code>assert isinstance(data, list)</code></td><td>data 一定是列表类型</td></tr>
+    <tr><td>④ 断言大小</td><td><code>assert len(data) > 0</code></td><td>列表长度一定大于 0</td></tr>
+    <tr><td>⑤ 断言真假</td><td><code>assert data["id"] == 1</code></td><td>id 字段的值一定是 1</td></tr>
+  </table>
+
+  <h4>带错误信息的 assert（推荐）</h4>
+  <pre><code># 不好的写法：报错了不知道为什么
+assert response.status_code == 200
+
+# 好的写法：报错时显示具体信息
+assert response.status_code == 200, f"状态码错误！期望 200，实际 {response.status_code}"</code></pre>
+
+  <div class="warn">
+    <strong>面试常考：</strong>pytest 的 assert 和 Python 原生的 assert 是同一个东西。pytest 只是增强了报错信息，让你能看到"期望值"和"实际值"的对比。不需要学专门的断言库（如 unittest 的 assertEqual），直接用 assert 就行。
+  </div>
+
+  <h4>assert 和 if/else 的区别</h4>
+  <pre><code># 用 if/else 写（不推荐）
+if response.status_code != 200:
+    print("测试失败！")
+else:
+    print("测试通过！")
+
+# 用 assert 写（推荐）
+assert response.status_code == 200, "状态码错误"
+
+# 区别：
+# if/else 失败了只是打印一句话，程序继续跑
+# assert 失败了直接抛异常，程序停止，pytest 会标记为 FAILED</code></pre>
 
   <h3>7. Response 对象常用属性</h3>
   <table>
@@ -385,6 +455,48 @@ def test_create_post(client):
 </section>
 
 <!-- ============================================================ -->
+<!-- Python vs Postman -->
+<!-- ============================================================ -->
+<section id="vs-postman">
+  <h2>Python 接口自动化 vs Postman</h2>
+
+  <div class="warn">
+    <strong>核心区别：</strong>Postman 是<strong>手工测试工具</strong>，Python 是<strong>自动化测试框架</strong>。就像你手动点浏览器 vs 用 Playwright 自动点浏览器——一个手动，一个自动。
+  </div>
+
+  <h3>对比表</h3>
+  <table>
+    <tr><th></th><th>Postman</th><th>Python (requests + pytest)</th></tr>
+    <tr><td>上手难度</td><td>简单，图形界面点点点</td><td>需要写代码</td></tr>
+    <tr><td>适用场景</td><td>手工调试、接口探索、快速验证</td><td>自动化回归测试、CI/CD 集成</td></tr>
+    <tr><td>断言能力</td><td>有，但有限（只能写简单的 JS 脚本）</td><td>强，Python 能写任意复杂逻辑</td></tr>
+    <tr><td>数据驱动</td><td>通过 CSV/JSON 文件，不够灵活</td><td>pytest parametrize，非常灵活</td></tr>
+    <tr><td>报告</td><td>Newman CLI 生成简单报告</td><td>Allure 生成专业报告</td></tr>
+    <tr><td>版本管理</td><td>导出 JSON 文件，不好 diff</td><td>Git 管理代码，方便协作</td></tr>
+    <tr><td>CI/CD</td><td>需要 Newman，配置复杂</td><td>直接 pytest 命令，一行集成</td></tr>
+    <tr><td>运行速度</td><td>慢（有 GUI 开销）</td><td>快（纯命令行）</td></tr>
+    <tr><td>登录/鉴权</td><td>手动填 Token，每次都要配</td><td>代码自动获取 Token，一次配置</td></tr>
+  </table>
+
+  <h3>实际工作中的分工</h3>
+  <div class="card">
+    <p><strong>Postman 做的事：</strong></p>
+    <p>① 开发给你一个新接口 → 你用 Postman 先手动调通，看看返回什么</p>
+    <p>② 调通后，把请求参数和预期结果记下来</p>
+    <p>③ 偶尔手工回归几个核心接口</p>
+    <br>
+    <p><strong>Python 做的事：</strong></p>
+    <p>① 把 Postman 调通的接口写成自动化脚本</p>
+    <p>② 每次代码提交自动跑全部接口测试</p>
+    <p>③ 生成 Allure 报告发给团队</p>
+    <p>④ 数据驱动覆盖各种边界情况</p>
+  </div>
+
+  <h3>一句话总结</h3>
+  <p><strong>Postman 是"手动调试工具"，Python 是"自动化测试框架"。</strong>工作中两者都用：先用 Postman 探索接口，再用 Python 写成自动化。面试中问"会不会接口测试"，回答"Python requests + pytest 自动化"比只说"会用 Postman"加分多得多。</p>
+</section>
+
+<!-- ============================================================ -->
 <!-- 面试考点 -->
 <!-- ============================================================ -->
 
@@ -425,6 +537,14 @@ def test_create_post(client):
 </section>
 
 </div>
+
+<!-- 回到顶部按钮 -->
+<button id="top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部">↑</button>
+<script>
+window.addEventListener('scroll', function() {
+  document.getElementById('top-btn').classList.toggle('show', window.scrollY > 400);
+});
+</script>
 
 <footer>
   <p>接口测试学习笔记 | 基于 requests + pytest + Allure</p>
