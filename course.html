@@ -359,6 +359,7 @@ footer a { color: var(--accent); text-decoration: none; }
   </div>
   <p style="margin-top:0.75rem;">
     <a href="index.html" style="display:inline-block;background:var(--accent);color:#fff;padding:0.4rem 1.2rem;border-radius:6px;text-decoration:none;font-weight:600;font-size:0.9rem;">📋 查看学习笔记</a>
+    <a href="#api-testing" style="display:inline-block;background:var(--accent2);color:#fff;padding:0.4rem 1.2rem;border-radius:6px;text-decoration:none;font-weight:600;font-size:0.9rem;margin-left:0.5rem;">📡 接口测试</a>
   </p>
 </header>
 
@@ -906,6 +907,21 @@ python code/day1/03_locating_and_waiting.py</code></pre>
 
   <h3>2. pytest 测试框架（面试必考）</h3>
 
+  <h4>pytest 发现机制</h4>
+  <p>pytest 运行时会自动查找当前目录及子目录下所有 <code>test_*.py</code> 或 <code>*_test.py</code> 文件，并执行其中以 <code>test_</code> 开头的函数。同时会从测试文件所在目录开始，逐级向上查找 <code>conftest.py</code> 并自动加载其中的 fixture 和钩子函数。</p>
+
+  <h4>常用命令速查</h4>
+  <div class="table-wrap">
+  <table>
+  <tr><th>命令</th><th>作用</th></tr>
+  <tr><td><code>pytest tests/ -v</code></td><td>运行 tests/ 下所有测试，显示详细结果</td></tr>
+  <tr><td><code>pytest tests/ -v -k "search"</code></td><td>只运行名称含 "search" 的用例</td></tr>
+  <tr><td><code>pytest tests/ -v -m smoke</code></td><td>只运行标记为 smoke 的用例</td></tr>
+  <tr><td><code>pytest tests/ --collect-only</code></td><td>只收集用例不执行，查看有哪些测试</td></tr>
+  <tr><td><code>pytest tests/ -v --html=report.html</code></td><td>生成 HTML 测试报告</td></tr>
+  </table>
+  </div>
+
   <h4>Fixture（夹具）— 测试前置/后置</h4>
   <pre><code><span class="hl-keyword">import</span> pytest
 
@@ -929,6 +945,20 @@ python code/day1/03_locating_and_waiting.py</code></pre>
     page.search(keyword)
     <span class="hl-keyword">assert</span> expected <span class="hl-keyword">in</span> page.get_first_result_title()</code></pre>
 
+  <h4>Fixture scope 详解</h4>
+  <div class="table-wrap">
+  <table>
+  <tr><th>scope</th><th>生命周期</th><th>适用场景</th></tr>
+  <tr><td>function</td><td>每个测试函数执行一次</td><td>page 标签页（每个测试独立页面）</td></tr>
+  <tr><td>class</td><td>每个测试类执行一次</td><td>类中共享的登录状态</td></tr>
+  <tr><td>module</td><td>每个 .py 文件执行一次</td><td>模块级测试数据准备</td></tr>
+  <tr><td>session</td><td>整个测试会话执行一次</td><td>browser 浏览器实例</td></tr>
+  </table>
+  </div>
+
+  <h4>yield 机制</h4>
+  <p>yield 把 fixture 分成两半：yield 之前是 setup（测试前准备），yield 之后是 teardown（测试后清理）。测试用例在 yield 这行执行，执行完回到 yield 后面做清理工作。</p>
+
   <h4>conftest.py — 共享 fixture</h4>
   <p><code>conftest.py</code> 是 pytest 的配置文件，<strong>同级及子目录的测试文件可自动使用其中定义的 fixture</strong>，无需手动 import。这是面试中经常被问到的一个知识点。</p>
 
@@ -941,6 +971,71 @@ pytest code/tests/ -v -m smoke</code></pre>
 
   <h3>✅ 动手练习</h3>
   <pre><code>pytest code/tests/test_baidu.py -v</code></pre>
+</section>
+
+<!-- ============================================================
+     ALLURE
+     ============================================================ -->
+<section id="allure">
+  <h2>Allure 测试报告（面试加分项）</h2>
+
+  <h3>1. 安装步骤</h3>
+  <div class="card">
+    <p><strong>步骤一：安装 Python 插件</strong>（不需要配环境变量）</p>
+    <pre><code>pip install allure-pytest</code></pre>
+    <p><strong>步骤二：下载 Allure CLI 命令行工具</strong>（需要配环境变量）</p>
+    <p>① 从 <a href="https://github.com/allure-framework/allure2/releases" target="_blank">Allure GitHub Releases</a> 下载最新版 zip</p>
+    <p>② 解压到固定目录（如 <code>E:\allure</code>）</p>
+    <p>③ 把 <code>E:\allure\bin</code> 添加到系统环境变量 PATH</p>
+    <p>④ 重启终端，输入 <code>allure --version</code> 验证</p>
+  </div>
+
+  <div class="warn">
+    <strong>为什么 Allure CLI 需要配环境变量？</strong><br>
+    pip install 的包会自动放到 Python 的 Scripts 目录（已在 PATH 中），所以不需要配。<br>
+    但手动下载解压的软件，系统不知道你放哪了，必须手动把 bin 目录加到 PATH 里告诉系统。
+  </div>
+
+  <h3>2. 三步生成报告</h3>
+  <pre><code># 第一步：运行测试，生成 JSON 原始数据
+pytest tests/ -v --alluredir=allure-results
+
+# 第二步：把 JSON 转成 HTML 报告
+allure generate allure-results -o allure-report --clean
+
+# 第三步：打开报告查看
+allure open allure-report</code></pre>
+
+  <h3>3. 常用注解速查</h3>
+  <div class="table-wrap">
+  <table>
+  <tr><th>注解</th><th>作用</th><th>示例</th></tr>
+  <tr><td><code>@allure.feature("模块名")</code></td><td>大功能模块</td><td><code>@allure.feature("搜索功能")</code></td></tr>
+  <tr><td><code>@allure.story("子功能")</code></td><td>功能下的子场景</td><td><code>@allure.story("基础搜索")</code></td></tr>
+  <tr><td><code>@allure.severity(level)</code></td><td>严重级别</td><td><code>@allure.severity(CRITICAL)</code></td></tr>
+  <tr><td><code>@allure.title("用例标题")</code></td><td>自定义用例名称</td><td><code>@allure.title("搜索关键词返回结果")</code></td></tr>
+  <tr><td><code>@allure.tag("标签")</code></td><td>标记分类</td><td><code>@allure.tag("smoke")</code></td></tr>
+  <tr><td><code>with allure.step("步骤")</code></td><td>报告中的步骤节点</td><td><code>with allure.step("搜索关键词"):</code></td></tr>
+  </table>
+  </div>
+
+  <h3>4. 严重级别</h3>
+  <p>BLOCKER（阻断）> CRITICAL（严重）> NORMAL（一般）> MINOR（轻微）> TRIVIAL（无关紧要）</p>
+
+  <h3>5. 失败自动截图</h3>
+  <p>在 conftest.py 中添加以下钩子，测试失败时自动截图并附加到 Allure 报告：</p>
+  <pre><code>@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    outcome = yield
+    report = outcome.get_result()
+    if report.when == "call" and report.failed:
+        page = item.funcargs.get("page")
+        if page:
+            allure.attach(
+                page.screenshot(full_page=True),
+                name="失败截图",
+                attachment_type=allure.attachment_type.PNG
+            )</code></pre>
 </section>
 
 <!-- ============================================================
@@ -1130,6 +1225,42 @@ pytest code/tests/ -v -m smoke</code></pre>
       <strong>答：</strong>（这是开放式问题，建议结合项目回答）采用 POM + pytest + Selenium/Playwright 架构。分层设计：页面对象层（封装元素定位和操作）、测试用例层（业务逻辑）、工具层（日志、截图、报告）、配置层（环境、数据）。使用 conftest.py 管理 fixture，pytest-html 生成报告，Jenkins/GitHub Actions 做 CI/CD 集成。
     </div>
   </div>
+
+  <h3>进阶题</h3>
+  <div class="qa-item">
+    <div class="qa-q">Q21: Allure 的 @allure.feature 和 @allure.story 有什么区别？</div>
+    <div class="qa-a">
+      <strong>答：</strong>feature 是大功能模块（如"搜索功能"），story 是功能下的子场景（如"基础搜索"）。层级关系：feature > story。报告中按 Behavior 分组，feature 是第一级文件夹，story 是第二级子文件夹。
+    </div>
+  </div>
+
+  <div class="qa-item">
+    <div class="qa-q">Q22: pytest 从命令行到浏览器关闭，经历了哪些步骤？</div>
+    <div class="qa-a">
+      <strong>答：</strong>① pytest 启动，加载 conftest.py 注册 fixture 和钩子；② 发现测试文件，解析 parametrize 展开为多个独立用例；③ 执行 browser fixture（session 级别）启动浏览器；④ 对每个用例执行 page fixture 创建标签页 → 执行测试函数 → 关闭标签页；⑤ 所有用例执行完毕，关闭浏览器；⑥ pytest 汇总结果输出统计。
+    </div>
+  </div>
+
+  <div class="qa-item">
+    <div class="qa-q">Q23: 为什么改了环境变量后命令仍然不识别？</div>
+    <div class="qa-a">
+      <strong>答：</strong>已打开的终端窗口不会自动刷新 PATH，缓存的是旧环境变量。解决方法：① 关掉终端重新打开；② 或手动执行刷新命令。pip install 的包不需要配 PATH，手动解压的软件才需要。
+    </div>
+  </div>
+
+  <div class="qa-item">
+    <div class="qa-q">Q24: wait_for_load_state("networkidle") 和 wait_for_load_state("domcontentloaded") 的区别？</div>
+    <div class="qa-a">
+      <strong>答：</strong>domcontentloaded 等 HTML 解析完成（DOM 树构建完毕），网络请求可能还在进行。networkidle 等所有网络请求完成（至少 500ms 内没有新请求）。对于搜索类页面，推荐用 networkidle 确保搜索结果已加载。
+    </div>
+  </div>
+
+  <div class="qa-item">
+    <div class="qa-q">Q25: 接口测试和 UI 自动化测试的区别？</div>
+    <div class="qa-a">
+      <strong>答：</strong>接口测试直接发送 HTTP 请求验证后端逻辑，不涉及浏览器操作，速度快、稳定性高、适合验证业务逻辑。UI 自动化测试模拟用户操作验证前端界面，更接近真实用户场景但速度慢、维护成本高。两者互补，通常接口测试先做，UI 自动化做端到端验证。
+    </div>
+  </div>
 </section>
 
 <!-- ============================================================
@@ -1175,6 +1306,71 @@ pytest code/tests/ -v -m smoke</code></pre>
 </section>
 
 </div><!-- /.container -->
+
+<!-- ============================================================
+     API TESTING
+     ============================================================ -->
+<section id="api-testing">
+  <h2>接口测试学习项目</h2>
+  <div class="status-grid">
+    <div class="status-card">
+      <div class="icon">📡</div>
+      <div class="label">测试目标</div>
+      <div class="value">JSONPlaceholder API</div>
+    </div>
+    <div class="status-card">
+      <div class="icon">📦</div>
+      <div class="label">核心库</div>
+      <div class="value">requests</div>
+    </div>
+    <div class="status-card">
+      <div class="icon">🧪</div>
+      <div class="label">测试框架</div>
+      <div class="value">pytest + Allure</div>
+    </div>
+    <div class="status-card">
+      <div class="icon">📋</div>
+      <div class="label">设计模式</div>
+      <div class="value">分层设计（API Client）</div>
+    </div>
+  </div>
+
+  <p>接口测试项目位于 <code>api-testing-course/</code> 目录下，包含：</p>
+  <div class="card">
+    <p>✅ GET/POST/PUT/DELETE 四种请求方法</p>
+    <p>✅ 状态码断言（200/201/404 等）</p>
+    <p>✅ JSON 响应体验证</p>
+    <p>✅ 请求头/请求体处理</p>
+    <p>✅ 数据驱动测试（pytest parametrize）</p>
+    <p>✅ API Client 分层设计（类似 POM）</p>
+    <p>✅ Allure 测试报告集成</p>
+    <p>✅ 课后考题（代码题 + 问答题）</p>
+  </div>
+
+  <h3>安装步骤</h3>
+  <pre><code># 安装 requests 库（发送 HTTP 请求的核心库）
+pip install requests
+
+# 验证安装
+python -c "import requests; print(requests.__version__)"</code></pre>
+
+  <h3>项目结构</h3>
+  <pre><code>api-testing-course/
+├── code/
+│   ├── api_client/
+│   │   └── jsonplaceholder_client.py  ← API 封装层（类似 POM 的 page 层）
+│   ├── tests/
+│   │   ├── conftest.py                ← pytest 全局配置
+│   │   ├── test_get_requests.py       ← GET 请求测试
+│   │   ├── test_post_requests.py      ← POST/PUT/DELETE 测试
+│   │   └── test_api_parametrize.py    ← 数据驱动接口测试
+│   └── exam/
+│       ├── exam_code.py               ← 代码考题
+│       └── exam_qa.py                 ← 问答考题
+└── api-testing-notes.html             ← 学习笔记</code></pre>
+
+  <a href="api-testing-notes.html" style="display:inline-block;background:var(--accent2);color:#fff;padding:0.5rem 1.5rem;border-radius:8px;text-decoration:none;font-weight:600;margin-top:1rem;">📡 查看接口测试学习笔记</a>
+</section>
 
 <footer>
   <p>UI 自动化测试速成课程 &copy; 2026 — 祝你面试顺利 🎉</p>
